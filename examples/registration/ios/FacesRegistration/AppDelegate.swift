@@ -19,4 +19,16 @@ class AppDelegate: RCTAppDelegate {
     self.initialProps = [:]
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
+
+  override func sourceURL(for bridge: RCTBridge) -> URL? {
+    bundleURL()
+  }
+
+  func bundleURL() -> URL? {
+#if DEBUG
+    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+#else
+    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+#endif
+  }
 }
