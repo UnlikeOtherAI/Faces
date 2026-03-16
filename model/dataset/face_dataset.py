@@ -1,9 +1,15 @@
 """PyTorch Dataset for aligned face images.
 
 Expects:
-    root/<identity_id>/<image>.jpg
+    root/<identity_id>/<image>.{jpg,png}
 
 Returns normalised tensors in [-1, 1] with integer class labels.
+
+Augmentation is tuned for synthetic→real generalisation:
+  - colour jitter simulates real camera variation
+  - gaussian blur simulates focus variation
+  - random erasing simulates occlusion (glasses, hats, hands)
+  - horizontal flip is safe for faces
 """
 
 from pathlib import Path
@@ -14,16 +20,19 @@ from torch.utils.data import Dataset
 import torchvision.transforms as T
 
 
-def default_transform(image_size: int = 112) -> Callable:
+def train_transform() -> Callable:
     return T.Compose([
-        T.RandomHorizontalFlip(),
-        T.ColorJitter(brightness=0.2, contrast=0.2),
+        T.RandomHorizontalFlip(p=0.5),
+        T.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.3, hue=0.05),
+        T.RandomGrayscale(p=0.05),          # occasional B&W robustness
+        T.GaussianBlur(kernel_size=3, sigma=(0.1, 1.5)),
         T.ToTensor(),
-        T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),  # → [-1, 1]
+        T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+        T.RandomErasing(p=0.3, scale=(0.02, 0.15)),  # occlusion simulation
     ])
 
 
-def val_transform(image_size: int = 112) -> Callable:
+def val_transform() -> Callable:
     return T.Compose([
         T.ToTensor(),
         T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
@@ -31,9 +40,11 @@ def val_transform(image_size: int = 112) -> Callable:
 
 
 class FaceDataset(Dataset):
+    EXTENSIONS = {".jpg", ".jpeg", ".png"}
+
     def __init__(self, root: Path, transform: Optional[Callable] = None):
         self.root = root
-        self.transform = transform or default_transform()
+        self.transform = transform or train_transform()
 
         identities = sorted(p.name for p in root.iterdir() if p.is_dir())
         self.class_to_idx = {name: i for i, name in enumerate(identities)}
@@ -41,8 +52,9 @@ class FaceDataset(Dataset):
 
         self.samples: list[Tuple[Path, int]] = []
         for identity, idx in self.class_to_idx.items():
-            for img_path in (root / identity).glob("*.jpg"):
-                self.samples.append((img_path, idx))
+            for img_path in (root / identity).iterdir():
+                if img_path.suffix.lower() in self.EXTENSIONS:
+                    self.samples.append((img_path, idx))
 
     def __len__(self) -> int:
         return len(self.samples)
