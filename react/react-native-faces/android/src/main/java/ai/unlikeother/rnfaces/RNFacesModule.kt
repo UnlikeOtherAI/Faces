@@ -59,8 +59,12 @@ class RNFacesModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun deleteWorker(workerId: String, promise: Promise) {
-        FacesKit.delete(workerId)
-        promise.resolve(null)
+        try {
+            FacesKit.delete(workerId)
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("DELETE_ERROR", e.message, e)
+        }
     }
 
     @ReactMethod
