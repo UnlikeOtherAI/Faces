@@ -1,0 +1,30 @@
+name: FacesRecognition
+
+options:
+  minimumXcodeVersion: "15.0"
+  deploymentTarget:
+    iOS: "16.0"
+
+packages:
+  AppReveal:
+    path: ../../../.packages/AppReveal/iOS
+
+targets:
+  FacesRecognition:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: FacesRecognition
+    dependencies:
+      - package: AppReveal
+        product: AppReveal
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        INFOPLIST_FILE: FacesRecognition/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: ai.unlikeother.facesrecognition
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        ENABLE_BITCODE: "NO"
+        CLANG_ENABLE_MODULES: "YES"

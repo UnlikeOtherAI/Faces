@@ -1,0 +1,15 @@
+rootProject.name = 'FacesRegistration'
+
+apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
+applyNativeModulesSettingsGradle(settings)
+
+include ':app'
+includeBuild('../node_modules/@react-native/gradle-plugin')
+
+// AppReveal — sourced from local clone (not published to Maven at v0.2.0)
+includeBuild('../../../.packages/AppReveal/Android') {
+    dependencySubstitution {
+        substitute(module('com.appreveal:appreveal')).using(project(':appreveal'))
+        substitute(module('com.appreveal:appreveal-noop')).using(project(':appreveal-noop'))
+    }
+}

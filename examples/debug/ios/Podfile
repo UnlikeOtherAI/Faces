@@ -12,10 +12,7 @@ target 'FacesDebug' do
     :app_path => "#{Pod::Config.instance.installation_root}/..",
   )
 
-  pod 'AppReveal',
-    :configurations => ['Debug'],
-    :git => 'https://github.com/UnlikeOtherAI/AppReveal.git',
-    :tag => '0.2.0'
+  # AppReveal is SPM-only — added via XcodeGen (project.yml), not CocoaPods.
 
   post_install do |installer|
     react_native_post_install(installer, :mac_catalyst_enabled => false)

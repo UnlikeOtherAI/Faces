@@ -23,23 +23,26 @@ out/
 *.tsbuildinfo
 
 # iOS
-ios/Pods/
-ios/build/
-ios/*.xcworkspace
+**/Pods/
+**/*.xcworkspace/
+**/*.xcodeproj/
 *.xcuserdata
 DerivedData/
+**/.xcode.env
+**/.xcode.env.local
 *.ipa
 *.dSYM.zip
 *.dSYM
 
 # Android
-android/build/
-android/.gradle/
-android/local.properties
-android/*.keystore
-android/app/release/
+**/.gradle/
+**/local.properties
+**/*.keystore
+**/app/release/
+**/.cxx/
 *.apk
 *.aab
+*.hprof
 
 # TFLite / CoreML generated/compiled models
 *.mlmodelc/

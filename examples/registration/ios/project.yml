@@ -1,0 +1,30 @@
+name: FacesRegistration
+
+options:
+  minimumXcodeVersion: "15.0"
+  deploymentTarget:
+    iOS: "16.0"
+
+packages:
+  AppReveal:
+    path: ../../../.packages/AppReveal/iOS
+
+targets:
+  FacesRegistration:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: FacesRegistration
+    dependencies:
+      - package: AppReveal
+        product: AppReveal
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        INFOPLIST_FILE: FacesRegistration/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: ai.unlikeother.facesregistration
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        ENABLE_BITCODE: "NO"
+        CLANG_ENABLE_MODULES: "YES"
