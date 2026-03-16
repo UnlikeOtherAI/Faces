@@ -33,6 +33,7 @@ public final class WorkerStore {
     }
 
     private func load() {
+        lock.lock(); defer { lock.unlock() }
         guard let data = try? Data(contentsOf: fileURL),
               let workers = try? JSONDecoder().decode([Worker].self, from: data) else { return }
         cache = Dictionary(uniqueKeysWithValues: workers.map { ($0.id, $0) })

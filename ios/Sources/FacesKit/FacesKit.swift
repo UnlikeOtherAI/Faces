@@ -17,6 +17,7 @@ public final class FacesKit: NSObject {
 
     private var frameCounter = 0
     private let processEveryNthFrame = 3
+    private let processingQueue = DispatchQueue(label: "faceskit.processing", qos: .userInitiated)
 
     private override init() {
         super.init()
@@ -53,19 +54,19 @@ public final class FacesKit: NSObject {
     private func handleFrame(_ buffer: CVPixelBuffer) {
         frameCounter += 1
         guard frameCounter % processEveryNthFrame == 0 else { return }
-        let start = Date()
-        guard
-            let image = cgImage(from: buffer),
-            let crop  = try? detector.detectAndCrop(image: image)
-        else { return }
-        guard var emb = try? embedder.embed(image: crop) else { return }
-        l2Normalize(&emb)
-        let workers = store.all()
-        guard let result = matcher.bestMatch(embedding: emb, workers: workers,
-                                              threshold: threshold) else { return }
-        let latency = Date().timeIntervalSince(start) * 1000
-        let match = MatchResult(worker: result.worker, score: result.score, latencyMs: latency)
-        DispatchQueue.main.async { self.onMatch?(match) }
+        guard let image = cgImage(from: buffer) else { return }
+        processingQueue.async { [self] in
+            let start = Date()
+            guard let crop = try? detector.detectAndCrop(image: image) else { return }
+            guard var emb = try? embedder.embed(image: crop) else { return }
+            l2Normalize(&emb)
+            let workers = store.all()
+            guard let result = matcher.bestMatch(embedding: emb, workers: workers,
+                                                  threshold: threshold) else { return }
+            let latency = Date().timeIntervalSince(start) * 1000
+            let match = MatchResult(worker: result.worker, score: result.score, latencyMs: latency)
+            DispatchQueue.main.async { self.onMatch?(match) }
+        }
     }
 
     private func cgImage(from buffer: CVPixelBuffer) -> CGImage? {
