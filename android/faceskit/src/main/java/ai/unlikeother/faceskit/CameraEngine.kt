@@ -30,7 +30,7 @@ internal class CameraEngine(private val context: Context) {
             try {
                 provider.unbindAll()
                 provider.bindToLifecycle(
-                    context as LifecycleOwner, selector, analysis
+                    androidx.lifecycle.ProcessLifecycleOwner.get(), selector, analysis
                 )
             } catch (_: Exception) {}
         }, ContextCompat.getMainExecutor(context))
