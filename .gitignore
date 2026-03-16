@@ -63,6 +63,9 @@ logs/
 # Test coverage
 coverage/
 
+# Local package mirrors (cloned for local SPM/Gradle references)
+.packages/
+
 # Training data and artefacts (model/)
 data/
 checkpoints/
