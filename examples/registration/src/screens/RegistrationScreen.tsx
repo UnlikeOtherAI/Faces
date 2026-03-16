@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView,
 } from 'react-native';
 import { launchCamera } from 'react-native-image-picker';
 import FaceID from 'react-native-faces';
@@ -48,6 +48,14 @@ export default function RegistrationScreen({ onDone }: Props) {
         {`Photos: ${photos.length} / 5`}
       </Text>
 
+      {photos.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbnailRow}>
+          {photos.map((uri, i) => (
+            <Image key={i} source={{ uri }} style={styles.thumbnail} />
+          ))}
+        </ScrollView>
+      )}
+
       <TouchableOpacity
         accessibilityLabel="registration.capture_button"
         style={[styles.button, photos.length >= 5 && styles.disabled]}
@@ -79,6 +87,8 @@ const styles = StyleSheet.create({
   button:    { backgroundColor: '#1a73e8', padding: 14, borderRadius: 8, alignItems: 'center' },
   save:      { backgroundColor: '#34a853' },
   disabled:  { opacity: 0.4 },
-  buttonText:{ color: '#fff', fontWeight: '600', fontSize: 16 },
-  status:    { fontSize: 14, color: '#555', textAlign: 'center' },
+  buttonText:    { color: '#fff', fontWeight: '600', fontSize: 16 },
+  status:        { fontSize: 14, color: '#555', textAlign: 'center' },
+  thumbnailRow:  { flexDirection: 'row' },
+  thumbnail:     { width: 72, height: 72, borderRadius: 8, marginRight: 8 },
 });
