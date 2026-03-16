@@ -14,6 +14,10 @@ class AppDelegate: RCTAppDelegate {
   ) -> Bool {
     #if DEBUG
     AppReveal.start()
+    // Set the Metro packager host. Change via Xcode scheme args (-jsLocation <host>)
+    // or the in-app Dev Menu → Configure Bundler to override.
+    // Default: Mac's WiFi IP. For USB+Xcode use "localhost" (LLDB tunnels the port).
+    RCTBundleURLProvider.sharedSettings().jsLocation = "192.168.1.229"
     #endif
     self.moduleName = "FacesRegistration"
     self.initialProps = [:]

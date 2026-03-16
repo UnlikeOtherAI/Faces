@@ -1,9 +1,11 @@
 require_relative '../node_modules/react-native/scripts/react_native_pods'
 
-platform :ios, min_ios_version_supported
+platform :ios, "16.0"
 prepare_react_native_project!
 
 target 'FacesRegistration' do
+  pod 'FacesKit', :path => '../../../ios'
+
   config = use_native_modules!
 
   use_react_native!(

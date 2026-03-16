@@ -50,6 +50,15 @@
             ReferencedContainer = "container:FacesRegistration.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <!-- jsLocation sets the Metro packager host in NSUserDefaults.
+              Change this to your Mac's local IP when developing on a WiFi device.
+              For USB+Xcode debugging, use "localhost" (LLDB sets up the tunnel). -->
+         <CommandLineArgument
+            argument = "-jsLocation 192.168.1.229"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

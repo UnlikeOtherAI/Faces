@@ -2,12 +2,17 @@ import CoreML
 import CoreGraphics
 
 final class FaceEmbedder {
+    #if SWIFT_PACKAGE
+    private static let resourceBundle = Bundle.module
+    #else
+    private static let resourceBundle = Bundle(for: FaceEmbedder.self)
+    #endif
     private var model: MLModel?
 
     init() { loadModel() }
 
     private func loadModel() {
-        guard let url = Bundle.module.url(forResource: "MobileFaceNet",
+        guard let url = FaceEmbedder.resourceBundle.url(forResource: "MobileFaceNet",
                                           withExtension: "mlpackage") else { return }
         model = try? MLModel(contentsOf: url)
     }
