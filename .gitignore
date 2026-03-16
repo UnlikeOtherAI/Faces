@@ -62,3 +62,13 @@ logs/
 
 # Test coverage
 coverage/
+
+# Training data and artefacts (model/)
+data/
+checkpoints/
+model.onnx
+model/.venv/
+model/__pycache__/
+model/architecture/__pycache__/
+model/dataset/__pycache__/
+model/export/__pycache__/

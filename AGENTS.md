@@ -10,6 +10,10 @@
 - A doc in `docs/` defining the architecture must exist before any code is written for that component.
 - No generated files in the repo (compiled models, build artefacts, IDE metadata). Keep `.gitignore` current.
 
+## Model
+
+We train our own CoreML and TFLite models — see [docs/model-training.md](docs/model-training.md). Do not download or vendor third-party pretrained weights.
+
 ## Testing
 
 All example apps must be fully E2E tested on iOS and Android — see [docs/testing.md](docs/testing.md).
