@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { SafeAreaView, View, TouchableOpacity, Text, Image, StyleSheet } from 'react-native';
 import FaceID from 'react-native-faces';
+
+const tabIcons = {
+  users: require('./assets/tab-users.png'),
+  'identify-all': require('./assets/tab-identify-all.png'),
+  'quick-id': require('./assets/tab-quick-id.png'),
+};
 import RegistrationScreen from './screens/RegistrationScreen';
 import WorkerListScreen from './screens/WorkerListScreen';
 import IdentifyAllScreen from './screens/IdentifyAllScreen';
@@ -31,16 +37,16 @@ export default function App() {
       </View>
 
       <View style={styles.tabBar}>
-        <TabButton label="Users" icon="👤" active={tab === 'users'} onPress={() => setTab('users')} />
-        <TabButton label="Identify All" icon="🔍" active={tab === 'identify-all'} onPress={() => setTab('identify-all')} />
-        <TabButton label="Quick ID" icon="⚡" active={tab === 'quick-id'} onPress={() => setTab('quick-id')} />
+        <TabButton label="Users" icon={tabIcons.users} active={tab === 'users'} onPress={() => setTab('users')} />
+        <TabButton label="Identify All" icon={tabIcons['identify-all']} active={tab === 'identify-all'} onPress={() => setTab('identify-all')} />
+        <TabButton label="Quick ID" icon={tabIcons['quick-id']} active={tab === 'quick-id'} onPress={() => setTab('quick-id')} />
       </View>
     </SafeAreaView>
   );
 }
 
 function TabButton({ label, icon, active, onPress }: {
-  label: string; icon: string; active: boolean; onPress: () => void;
+  label: string; icon: any; active: boolean; onPress: () => void;
 }) {
   return (
     <TouchableOpacity
@@ -48,7 +54,7 @@ function TabButton({ label, icon, active, onPress }: {
       style={styles.tab}
       onPress={onPress}
     >
-      <Text style={styles.tabIcon}>{icon}</Text>
+      <Image source={icon} style={[styles.tabIcon, !active && styles.tabIconInactive]} />
       <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -59,7 +65,8 @@ const styles = StyleSheet.create({
   content:        { flex: 1 },
   tabBar:         { flexDirection: 'row', borderTopWidth: 1, borderColor: '#e0e0e0', paddingBottom: 4 },
   tab:            { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  tabIcon:        { fontSize: 20 },
+  tabIcon:        { width: 28, height: 28, borderRadius: 6 },
+  tabIconInactive: { opacity: 0.4 },
   tabLabel:       { fontSize: 11, color: '#999', marginTop: 2 },
   tabLabelActive: { color: '#1a73e8', fontWeight: '600' },
 });

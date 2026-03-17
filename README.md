@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/app-icon.png" width="180" height="180" style="border-radius: 36px;" alt="Faces" />
+</p>
+
 # Faces
 
 Cross-platform face identification library for in-app multi-user authentication.
