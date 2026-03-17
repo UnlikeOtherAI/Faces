@@ -253,6 +253,12 @@ After export, rebuild the iOS and Android projects — the model is bundled as a
 
 ---
 
+## Screenshots
+
+| Users | Identify All | Quick ID |
+|:-----:|:------------:|:--------:|
+| <img src="docs/screenshots/users.png" width="240" /> | <img src="docs/screenshots/identify-all.png" width="240" /> | <img src="docs/screenshots/quick-id.png" width="240" /> |
+
 ## Example apps
 
 Three example apps in `examples/` demonstrate the full workflow. See [docs/testing.md](docs/testing.md) for E2E test instructions using AppReveal.
