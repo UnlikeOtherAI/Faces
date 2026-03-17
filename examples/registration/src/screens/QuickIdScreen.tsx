@@ -8,6 +8,7 @@ export default function QuickIdScreen() {
   const [result, setResult] = useState<{ name: string; score: number; timeMs: number } | null>(null);
   const [cameraOn, setCameraOn] = useState(false);
   const startTime = useRef(0);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   // Start/stop camera based on preload toggle
   useEffect(() => {
@@ -20,7 +21,10 @@ export default function QuickIdScreen() {
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => { FaceID.stopRecognition(); };
+    return () => {
+      cleanupRef.current?.();
+      FaceID.stopRecognition();
+    };
   }, []);
 
   const handleIdentify = () => {
@@ -33,15 +37,55 @@ export default function QuickIdScreen() {
       : FaceID.startRecognition().then(() => setCameraOn(true));
 
     startCamera.then(() => {
-      const unsub = FaceID.onFaceRecognized((match: MatchResult) => {
+      let bestMatch: MatchResult | null = null;
+      let settled = false;
+
+      const settle = (match: MatchResult | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unsubScores();
+        unsubMatch();
+        cleanupRef.current = null;
+
         const elapsed = Date.now() - startTime.current;
-        setResult({ name: match.workerName, score: match.score, timeMs: elapsed });
+        if (match && match.score > 0.3) {
+          setResult({ name: match.workerName, score: match.score, timeMs: elapsed });
+        } else {
+          setResult({ name: 'No match', score: 0, timeMs: elapsed });
+        }
         setIdentifying(false);
-        unsub();
         if (!preload) {
           FaceID.stopRecognition().then(() => setCameraOn(false));
         }
+      };
+
+      // Listen for high-confidence match (instant resolve)
+      const unsubMatch = FaceID.onFaceRecognized((match: MatchResult) => {
+        settle(match);
       });
+
+      // Track best score from all-scores stream as fallback
+      const unsubScores = FaceID.onAllScores((scores: MatchResult[]) => {
+        const top = scores.reduce((best, s) => s.score > best.score ? s : best, scores[0]);
+        if (top && (!bestMatch || top.score > bestMatch.score)) {
+          bestMatch = top;
+        }
+      });
+
+      // After 4 seconds, use whatever best match we have
+      const timer = setTimeout(() => {
+        settle(bestMatch);
+      }, 4000);
+
+      cleanupRef.current = () => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          unsubScores();
+          unsubMatch();
+        }
+      };
     });
   };
 
@@ -76,7 +120,9 @@ export default function QuickIdScreen() {
 
       {result && (
         <View style={styles.resultCard}>
-          <Text style={styles.resultName}>{result.name}</Text>
+          <Text style={[styles.resultName, result.score === 0 && { color: '#ea4335' }]}>
+            {result.name}
+          </Text>
           <Text style={styles.resultScore}>
             {Math.round(result.score * 100)}% match
           </Text>
