@@ -6,7 +6,7 @@ import CoreImage
 public final class FacesKit: NSObject {
     public static let shared = FacesKit()
 
-    public var threshold: Float = 0.70
+    public var threshold: Float = 0.60
     public var onMatch: ((MatchResult) -> Void)?
     public var onAllScores: (([MatchResult]) -> Void)?
     public var onFaceRect: ((CGRect, String?) -> Void)?

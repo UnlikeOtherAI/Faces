@@ -50,22 +50,27 @@ class RNFacesCameraView: UIView {
     }
 
     private func updateOverlay(rect: CGRect, name: String?) {
+        guard let previewLayer = previewLayer else { return }
+
         if rect == .zero {
             overlayBox.path = nil
             nameLabel.isHidden = true
             return
         }
 
-        // Vision rect is normalized (origin bottom-left). Front camera is mirrored.
-        // Convert to view coordinates:
-        let w = bounds.width
-        let h = bounds.height
-        let x = rect.minX * w          // already mirrored by preview layer
-        let y = (1 - rect.maxY) * h    // flip Y from bottom-left to top-left
-        let fw = rect.width * w
-        let fh = rect.height * h
+        // Vision bounding box: normalized, origin at bottom-left.
+        // Convert to metadata output rect space (normalized, origin top-left).
+        // No axis swap — camera buffer matches portrait orientation.
+        // layerRectConverted handles aspect fill and front-camera mirroring.
+        let metadataRect = CGRect(
+            x: rect.minX,
+            y: 1 - rect.maxY,
+            width: rect.width,
+            height: rect.height
+        )
 
-        let faceFrame = CGRect(x: x, y: y, width: fw, height: fh)
+        // layerRectConverted handles aspect fill scaling and positioning
+        let faceFrame = previewLayer.layerRectConverted(fromMetadataOutputRect: metadataRect)
         overlayBox.path = UIBezierPath(roundedRect: faceFrame, cornerRadius: 4).cgPath
 
         if let name = name {

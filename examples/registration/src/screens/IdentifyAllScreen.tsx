@@ -50,7 +50,7 @@ export default function IdentifyAllScreen() {
 
   return (
     <View style={styles.container}>
-      <FacesCameraView style={styles.camera} />
+      {FacesCameraView ? <FacesCameraView style={styles.camera} /> : <View style={[styles.camera, { backgroundColor: '#000' }]} />}
 
       <Text style={styles.title}>Identify All</Text>
 
@@ -87,7 +87,7 @@ export default function IdentifyAllScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24 },
-  camera:    { height: 120, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
+  camera:    { aspectRatio: 1, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
   title:     { fontSize: 24, fontWeight: '700', marginBottom: 4 },
   empty:     { textAlign: 'center', color: '#999', marginTop: 40 },
   row:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#eee' },

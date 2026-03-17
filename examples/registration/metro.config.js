@@ -2,11 +2,12 @@ const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
 const path = require('path');
 
 const projectRoot = __dirname;
-// Watch the local react-native-faces package so Metro picks up changes
+// Watch local packages so Metro picks up changes
 const rnFacesRoot = path.resolve(projectRoot, '../../react/react-native-faces');
+const appRevealRoot = path.resolve(projectRoot, '../../.packages/AppReveal/ReactNative/appreveal');
 
 const config = {
-  watchFolders: [rnFacesRoot],
+  watchFolders: [rnFacesRoot, appRevealRoot],
   resolver: {
     // Allow Metro to follow pnpm symlinks
     unstable_enableSymlinks: true,

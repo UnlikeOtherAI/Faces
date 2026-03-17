@@ -1,5 +1,6 @@
 #import <React/RCTBridgeModule.h>
 #import <React/RCTEventEmitter.h>
+#import <React/RCTViewManager.h>
 
 @interface RCT_EXTERN_MODULE(RNFaces, RCTEventEmitter)
 
@@ -34,4 +35,8 @@ RCT_EXTERN_METHOD(isModelLoaded:(RCTPromiseResolveBlock)resolve
 
 + (BOOL)requiresMainQueueSetup { return NO; }
 
+@end
+
+// Camera preview native view
+@interface RCT_EXTERN_MODULE(RNFacesCameraViewManager, RCTViewManager)
 @end

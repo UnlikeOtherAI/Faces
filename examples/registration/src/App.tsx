@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView, View, TouchableOpacity, Text, Image, StyleSheet } from 'react-native';
 import FaceID from 'react-native-faces';
+try {
+  const { AppReveal } = require('react-native-appreveal');
+  if (__DEV__) AppReveal.start();
+} catch (e) {
+  console.warn('[AppReveal] Failed to start:', e);
+}
 
 const tabIcons = {
   users: require('./assets/tab-users.png'),

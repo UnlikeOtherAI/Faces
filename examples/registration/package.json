@@ -12,6 +12,7 @@
     "react": "18.2.0",
     "react-native": "0.73.0",
     "react-native-faces": "../../react/react-native-faces",
+    "react-native-appreveal": "../../.packages/AppReveal/ReactNative/appreveal",
     "react-native-image-picker": "^7.1.0"
   },
   "devDependencies": {

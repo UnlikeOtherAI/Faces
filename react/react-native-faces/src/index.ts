@@ -47,7 +47,13 @@ const FaceID = {
   },
 };
 
-export const FacesCameraView = requireNativeComponent('RNFacesCameraView');
+let _FacesCameraView: any = null;
+try {
+  _FacesCameraView = requireNativeComponent('RNFacesCameraView');
+} catch (e) {
+  // Native view not available
+}
+export const FacesCameraView = _FacesCameraView;
 
 export default FaceID;
 export type { Worker, MatchResult };

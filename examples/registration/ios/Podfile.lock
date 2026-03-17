@@ -1,4 +1,6 @@
 PODS:
+  - AppReveal (0.1.0):
+    - React-Core
   - boost (1.83.0)
   - DoubleConversion (1.1.6)
   - FacesKit (0.1.0)
@@ -1067,6 +1069,7 @@ PODS:
   - Yoga (1.14.0)
 
 DEPENDENCIES:
+  - AppReveal (from `../node_modules/react-native-appreveal`)
   - boost (from `../node_modules/react-native/third-party-podspecs/boost.podspec`)
   - DoubleConversion (from `../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)
   - FacesKit (from `../../../ios`)
@@ -1130,6 +1133,8 @@ SPEC REPOS:
     - SocketRocket
 
 EXTERNAL SOURCES:
+  AppReveal:
+    :path: "../node_modules/react-native-appreveal"
   boost:
     :podspec: "../node_modules/react-native/third-party-podspecs/boost.podspec"
   DoubleConversion:
@@ -1237,6 +1242,7 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
+  AppReveal: 3e6d04f6d736ffcef4011ff296b8a466ee07b1ee
   boost: d3f49c53809116a5d38da093a8aa78bf551aed09
   DoubleConversion: fea03f2699887d960129cc54bba7e52542b6f953
   FacesKit: 4a8a096d21c09b632ae36902955dad70f51ef5ac
