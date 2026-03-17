@@ -37,7 +37,10 @@ export default function RegistrationScreen({ onDone }: Props) {
   const capture = async () => {
     const result = await launchCamera({ mediaType: 'photo', cameraType: 'front' });
     const uri = result.assets?.[0]?.uri;
-    if (uri) setPhotos(p => [...p, uri]);
+    if (!uri) return;
+    // Copy from tmp to persistent storage so it survives app restarts
+    const persistedUri = await FaceID.persistPhoto(uri);
+    setPhotos(p => [...p, persistedUri]);
   };
 
   const save = async () => {
@@ -52,6 +55,7 @@ export default function RegistrationScreen({ onDone }: Props) {
       setPhotos([]);
       setName('');
       AsyncStorage.removeItem(DRAFT_KEY);
+      FaceID.clearDraftPhotos();
       onDone();
     } catch (e: any) {
       setStatus('Error: ' + e.message);

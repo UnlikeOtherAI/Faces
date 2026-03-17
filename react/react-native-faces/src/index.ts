@@ -31,6 +31,8 @@ const FaceID = {
   deleteWorker: (workerId: string): Promise<void> =>
     RNFaces.deleteWorker(workerId),
 
+  persistPhoto: (uri: string): Promise<string> => RNFaces.persistPhoto(uri),
+  clearDraftPhotos: (): Promise<void> => RNFaces.clearDraftPhotos(),
   isModelLoaded: (): Promise<boolean> => RNFaces.isModelLoaded(),
   getWorkers: (): Promise<Worker[]> => RNFaces.getWorkers(),
 

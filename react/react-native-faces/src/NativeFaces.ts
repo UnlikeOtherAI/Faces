@@ -20,6 +20,8 @@ export interface Spec extends TurboModule {
   stopRecognition(): Promise<void>;
   registerWorker(workerId: string, name: string, photos: string[]): Promise<void>;
   deleteWorker(workerId: string): Promise<void>;
+  persistPhoto(uri: string): Promise<string>;
+  clearDraftPhotos(): Promise<void>;
   isModelLoaded(): Promise<boolean>;
   getWorkers(): Promise<Worker[]>;
   addListener(eventType: string): void;

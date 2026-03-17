@@ -76,6 +76,30 @@ class RNFaces: RCTEventEmitter {
         }
     }
 
+    @objc func persistPhoto(_ uri: String,
+                            resolver resolve: @escaping RCTPromiseResolveBlock,
+                            rejecter reject: @escaping RCTPromiseRejectBlock) {
+        let src = uri.hasPrefix("file://") ? String(uri.dropFirst(7)) : uri
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first!.appendingPathComponent("FacesKit/drafts")
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let dst = dir.appendingPathComponent(UUID().uuidString + ".jpg")
+            try FileManager.default.copyItem(atPath: src, toPath: dst.path)
+            resolve("file://" + dst.path)
+        } catch {
+            reject("PERSIST_ERROR", error.localizedDescription, error)
+        }
+    }
+
+    @objc func clearDraftPhotos(_ resolve: @escaping RCTPromiseResolveBlock,
+                                rejecter reject: @escaping RCTPromiseRejectBlock) {
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first!.appendingPathComponent("FacesKit/drafts")
+        try? FileManager.default.removeItem(at: dir)
+        resolve(nil)
+    }
+
     @objc func isModelLoaded(_ resolve: @escaping RCTPromiseResolveBlock,
                              rejecter reject: @escaping RCTPromiseRejectBlock) {
         resolve(FacesKit.shared.isModelLoaded())

@@ -36,25 +36,35 @@ final class FaceEmbedder {
 
     func embed(image: CGImage) throws -> [Float] {
         guard let model else { throw FacesKitError.modelNotFound }
-        var pixelBuffer: CVPixelBuffer?
-        CVPixelBufferCreate(nil, 112, 112, kCVPixelFormatType_32BGRA, nil, &pixelBuffer)
-        guard let pb = pixelBuffer else { throw FacesKitError.embeddingFailed }
-        CVPixelBufferLockBaseAddress(pb, [])
-        let ctx = CGContext(
-            data: CVPixelBufferGetBaseAddress(pb),
-            width: 112, height: 112,
-            bitsPerComponent: 8,
-            bytesPerRow: CVPixelBufferGetBytesPerRow(pb),
+
+        // Render CGImage into 112×112 RGBA byte buffer
+        let w = 112, h = 112
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        guard let ctx = CGContext(
+            data: &pixels, width: w, height: h,
+            bitsPerComponent: 8, bytesPerRow: w * 4,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
-        )
-        ctx?.draw(image, in: CGRect(x: 0, y: 0, width: 112, height: 112))
-        CVPixelBufferUnlockBaseAddress(pb, [])
-        let input = try MLDictionaryFeatureProvider(dictionary: ["input": pb])
+        ) else { throw FacesKitError.embeddingFailed }
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        // Build MLMultiArray [1, 3, 112, 112] with pixels normalised to [-1, 1]
+        let arr = try MLMultiArray(shape: [1, 3, 112, 112] as [NSNumber], dataType: .float32)
+        let ptr = arr.dataPointer.bindMemory(to: Float.self, capacity: 3 * w * h)
+        for y in 0..<h {
+            for x in 0..<w {
+                let px = (y * w + x) * 4
+                ptr[0 * w * h + y * w + x] = Float(pixels[px])     / 127.5 - 1.0  // R
+                ptr[1 * w * h + y * w + x] = Float(pixels[px + 1]) / 127.5 - 1.0  // G
+                ptr[2 * w * h + y * w + x] = Float(pixels[px + 2]) / 127.5 - 1.0  // B
+            }
+        }
+
+        let input = try MLDictionaryFeatureProvider(dictionary: ["input": arr])
         let output = try model.prediction(from: input)
-        guard let arr = output.featureValue(for: "embedding")?.multiArrayValue else {
+        guard let emb = output.featureValue(for: "embedding")?.multiArrayValue else {
             throw FacesKitError.embeddingFailed
         }
-        return (0..<arr.count).map { Float(truncating: arr[$0]) }
+        return (0..<emb.count).map { Float(truncating: emb[$0]) }
     }
 }
