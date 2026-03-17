@@ -51,8 +51,9 @@ class RNFaces: RCTEventEmitter {
                 .first!.appendingPathComponent("FacesKit/photos")
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let dst = dir.appendingPathComponent("\(workerId).jpg")
+            try? FileManager.default.removeItem(at: dst)
             try? FileManager.default.copyItem(at: URL(fileURLWithPath: src), to: dst)
-            return dst.path
+            return FileManager.default.fileExists(atPath: dst.path) ? dst.path : nil
         }
         FacesKit.shared.register(workerId: workerId, name: name, photos: images, photoPath: photoPath) { result in
             switch result {
