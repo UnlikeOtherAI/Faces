@@ -10,7 +10,8 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = "16.0"
 
   s.source_files  = "Sources/FacesKit/**/*.swift"
-  s.resources     = "Sources/FacesKit/Resources/**/*"
+  s.resources     = ["Sources/FacesKit/Resources/MobileFaceNet.mlpackage",
+                     "Sources/FacesKit/Resources/placeholder.json"]
 
   s.frameworks    = "CoreML", "Vision", "AVFoundation"
 end
