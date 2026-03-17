@@ -1,0 +1,23 @@
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: ENV.fetch("ASC_KEY_FILEPATH")
+    )
+  end
+
+  lane :beta do
+    build_app(
+      workspace: "FacesRegistration.xcworkspace",
+      scheme: "FacesRegistration",
+      export_method: "app-store",
+      clean: true
+    )
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+end

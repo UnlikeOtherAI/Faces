@@ -54,6 +54,8 @@ DerivedData/
 .env
 .env.*
 !.env.example
+*.p8
+**/fastlane/api_key.json
 
 # IDE
 .idea/
