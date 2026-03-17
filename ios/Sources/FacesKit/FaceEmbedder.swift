@@ -50,11 +50,11 @@ final class FaceEmbedder {
         )
         ctx?.draw(image, in: CGRect(x: 0, y: 0, width: 112, height: 112))
         CVPixelBufferUnlockBaseAddress(pb, [])
-        let input = try MLDictionaryFeatureProvider(dictionary: ["input_1": pb])
+        let input = try MLDictionaryFeatureProvider(dictionary: ["input": pb])
         let output = try model.prediction(from: input)
-        guard let arr = output.featureValue(for: "output")?.multiArrayValue else {
+        guard let arr = output.featureValue(for: "embedding")?.multiArrayValue else {
             throw FacesKitError.embeddingFailed
         }
-        return (0..<128).map { Float(truncating: arr[$0]) }
+        return (0..<arr.count).map { Float(truncating: arr[$0]) }
     }
 }
