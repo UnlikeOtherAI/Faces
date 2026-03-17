@@ -28,6 +28,7 @@ public final class FacesKit: NSObject {
     public func stop()  { camera.stop() }
 
     public func register(workerId: String, name: String, photos: [CGImage],
+                         photoPath: String? = nil,
                          completion: @escaping (Result<Worker, Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [self] in
             do {
@@ -39,7 +40,7 @@ public final class FacesKit: NSObject {
                     embeddings.append(emb)
                 }
                 guard !embeddings.isEmpty else { throw FacesKitError.noFaceDetected }
-                let worker = Worker(id: workerId, name: name, embeddings: embeddings)
+                let worker = Worker(id: workerId, name: name, embeddings: embeddings, photoPath: photoPath)
                 try self.store.save(worker)
                 DispatchQueue.main.async { completion(.success(worker)) }
             } catch {
@@ -48,7 +49,13 @@ public final class FacesKit: NSObject {
         }
     }
 
-    public func delete(workerId: String) throws { try store.delete(workerId: workerId) }
+    public func delete(workerId: String) throws {
+        if let worker = store.all().first(where: { $0.id == workerId }),
+           let path = worker.photoPath {
+            try? FileManager.default.removeItem(atPath: path)
+        }
+        try store.delete(workerId: workerId)
+    }
     public func workers() -> [Worker] { store.all() }
 
     private func handleFrame(_ buffer: CVPixelBuffer) {

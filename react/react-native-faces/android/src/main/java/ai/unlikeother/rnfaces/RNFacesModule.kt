@@ -44,12 +44,17 @@ class RNFacesModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun registerWorker(workerId: String, name: String,
                        photos: ReadableArray, promise: Promise) {
-        val bitmaps = (0 until photos.size()).mapNotNull { i ->
-            val path = photos.getString(i)?.removePrefix("file://")
-                ?: return@mapNotNull null
-            BitmapFactory.decodeFile(path)
+        val paths = (0 until photos.size()).mapNotNull { i ->
+            photos.getString(i)?.removePrefix("file://")
         }
-        FacesKit.register(workerId, name, bitmaps) { result ->
+        val photoPath: String? = paths.firstOrNull()?.let { src ->
+            val dir = java.io.File(reactContext.filesDir, "faceskit/photos").also { it.mkdirs() }
+            val dst = java.io.File(dir, "$workerId.jpg")
+            java.io.File(src).copyTo(dst, overwrite = true)
+            dst.absolutePath
+        }
+        val bitmaps = paths.mapNotNull { BitmapFactory.decodeFile(it) }
+        FacesKit.register(workerId, name, bitmaps, photoPath) { result ->
             result.fold(
                 onSuccess = { promise.resolve(null) },
                 onFailure = { promise.reject("REGISTER_ERROR", it) }
@@ -75,6 +80,7 @@ class RNFacesModule(private val reactContext: ReactApplicationContext) :
                 putString("id",          w.id)
                 putString("name",        w.name)
                 putDouble("lastUpdated", w.lastUpdated.toDouble())
+                w.photoPath?.let { putString("photoUri", "file://$it") }
             })
         }
         promise.resolve(arr)

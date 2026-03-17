@@ -5,6 +5,7 @@ export interface Worker {
   id: string;
   name: string;
   lastUpdated: number;
+  photoUri?: string;
 }
 
 export interface MatchResult {

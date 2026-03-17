@@ -6,13 +6,15 @@ public struct Worker: Codable, Identifiable, Equatable {
     public var embeddings: [[Float]]
     public var averageEmbedding: [Float]
     public var lastUpdated: Date
+    public var photoPath: String?
 
-    public init(id: String, name: String, embeddings: [[Float]]) {
+    public init(id: String, name: String, embeddings: [[Float]], photoPath: String? = nil) {
         self.id = id
         self.name = name
         self.embeddings = embeddings
         self.averageEmbedding = Self.average(embeddings)
         self.lastUpdated = Date()
+        self.photoPath = photoPath
     }
 
     static func average(_ vecs: [[Float]]) -> [Float] {

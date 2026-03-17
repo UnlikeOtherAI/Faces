@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import FaceID, { Worker } from 'react-native-faces';
 
 interface Props { onBack: () => void }
@@ -26,6 +26,9 @@ export default function WorkerListScreen({ onBack }: Props) {
         }
         renderItem={({ item, index }) => (
           <View accessibilityLabel={`workerlist.item_${index}`} style={styles.row}>
+            {item.photoUri
+              ? <Image source={{ uri: item.photoUri }} style={styles.avatar} />
+              : <View style={[styles.avatar, styles.avatarPlaceholder]} />}
             <Text style={styles.name}>{item.name}</Text>
             <TouchableOpacity
               accessibilityLabel={`workerlist.delete_${index}`}
@@ -49,12 +52,14 @@ export default function WorkerListScreen({ onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container:  { flex: 1, padding: 24 },
-  title:      { fontSize: 24, fontWeight: '700', marginBottom: 16 },
-  row:        { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#eee' },
-  name:       { fontSize: 16 },
-  delete:     { color: '#d93025', fontWeight: '600' },
-  empty:      { textAlign: 'center', color: '#999', marginTop: 40 },
-  button:     { backgroundColor: '#1a73e8', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 16 },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  container:         { flex: 1, padding: 24 },
+  title:             { fontSize: 24, fontWeight: '700', marginBottom: 16 },
+  row:               { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: '#eee' },
+  avatar:            { width: 48, height: 48, borderRadius: 24 },
+  avatarPlaceholder: { backgroundColor: '#e0e0e0' },
+  name:              { flex: 1, fontSize: 16 },
+  delete:            { color: '#d93025', fontWeight: '600' },
+  empty:             { textAlign: 'center', color: '#999', marginTop: 40 },
+  button:            { backgroundColor: '#1a73e8', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 16 },
+  buttonText:        { color: '#fff', fontWeight: '600', fontSize: 16 },
 });

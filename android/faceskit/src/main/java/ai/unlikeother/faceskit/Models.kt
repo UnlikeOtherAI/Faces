@@ -7,7 +7,8 @@ data class Worker(
     val name: String,
     val embeddings: List<FloatArray>,
     val averageEmbedding: FloatArray,
-    val lastUpdated: Long = System.currentTimeMillis()
+    val lastUpdated: Long = System.currentTimeMillis(),
+    val photoPath: String? = null
 )
 
 data class MatchResult(

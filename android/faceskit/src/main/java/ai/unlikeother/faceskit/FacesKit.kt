@@ -36,6 +36,7 @@ object FacesKit {
 
     fun register(workerId: String, name: String,
                  photos: List<android.graphics.Bitmap>,
+                 photoPath: String? = null,
                  callback: (Result<Worker>) -> Unit) {
         scope.launch {
             try {
@@ -48,7 +49,8 @@ object FacesKit {
                 val worker = Worker(
                     id = workerId, name = name,
                     embeddings = embeddings,
-                    averageEmbedding = averageEmbedding(embeddings)
+                    averageEmbedding = averageEmbedding(embeddings),
+                    photoPath = photoPath
                 )
                 store.save(worker)
                 withContext(Dispatchers.Main) { callback(Result.success(worker)) }
@@ -58,7 +60,12 @@ object FacesKit {
         }
     }
 
-    fun delete(workerId: String) { store.delete(workerId) }
+    fun delete(workerId: String) {
+        store.all().firstOrNull { it.id == workerId }?.photoPath?.let {
+            java.io.File(it).delete()
+        }
+        store.delete(workerId)
+    }
     fun workers(): List<Worker> = store.all()
 
     private suspend fun handleFrame(bitmap: android.graphics.Bitmap) {

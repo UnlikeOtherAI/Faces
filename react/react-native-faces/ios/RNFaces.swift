@@ -42,12 +42,19 @@ class RNFaces: RCTEventEmitter {
                               resolver resolve: @escaping RCTPromiseResolveBlock,
                               rejecter reject: @escaping RCTPromiseRejectBlock) {
         let images: [CGImage] = photos.compactMap { uri in
-            let path = uri.hasPrefix("file://")
-                ? String(uri.dropFirst(7))
-                : uri
+            let path = uri.hasPrefix("file://") ? String(uri.dropFirst(7)) : uri
             return UIImage(contentsOfFile: path)?.cgImage
         }
-        FacesKit.shared.register(workerId: workerId, name: name, photos: images) { result in
+        let photoPath: String? = photos.first.flatMap { uri -> String? in
+            let src = uri.hasPrefix("file://") ? String(uri.dropFirst(7)) : uri
+            let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+                .first!.appendingPathComponent("FacesKit/photos")
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let dst = dir.appendingPathComponent("\(workerId).jpg")
+            try? FileManager.default.copyItem(at: URL(fileURLWithPath: src), to: dst)
+            return dst.path
+        }
+        FacesKit.shared.register(workerId: workerId, name: name, photos: images, photoPath: photoPath) { result in
             switch result {
             case .success:
                 resolve(nil)
@@ -71,11 +78,15 @@ class RNFaces: RCTEventEmitter {
     @objc func getWorkers(_ resolve: @escaping RCTPromiseResolveBlock,
                           rejecter reject: @escaping RCTPromiseRejectBlock) {
         let workers = FacesKit.shared.workers().map { w -> [String: Any] in
-            [
+            var dict: [String: Any] = [
                 "id":          w.id,
                 "name":        w.name,
                 "lastUpdated": w.lastUpdated.timeIntervalSince1970 * 1000,
             ]
+            if let path = w.photoPath {
+                dict["photoUri"] = "file://\(path)"
+            }
+            return dict
         }
         resolve(workers)
     }
