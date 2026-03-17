@@ -31,6 +31,7 @@ const FaceID = {
   deleteWorker: (workerId: string): Promise<void> =>
     RNFaces.deleteWorker(workerId),
 
+  isModelLoaded: (): Promise<boolean> => RNFaces.isModelLoaded(),
   getWorkers: (): Promise<Worker[]> => RNFaces.getWorkers(),
 
   onFaceRecognized: (callback: (match: MatchResult) => void): (() => void) => {

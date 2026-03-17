@@ -1234,7 +1234,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   boost: d3f49c53809116a5d38da093a8aa78bf551aed09
   DoubleConversion: fea03f2699887d960129cc54bba7e52542b6f953
-  FacesKit: f971fb3fa69dae8e660e6e460befbf86c6f065ff
+  FacesKit: 4a8a096d21c09b632ae36902955dad70f51ef5ac
   FBLazyVector: 39ba45baf4e398618f8b3a4bb6ba8fcdb7fc2133
   FBReactNativeSpec: b338e31bb93ba6c4336ad1f402ba2203036a7463
   fmt: ff9d55029c625d3757ed641535fd4a75fedc7ce9

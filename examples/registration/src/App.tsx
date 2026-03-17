@@ -9,8 +9,10 @@ export default function App() {
 
   useEffect(() => {
     FaceID.getWorkers().then(workers => {
+      console.log('[Faces] getWorkers:', JSON.stringify(workers));
       setScreen(workers.length > 0 ? 'list' : 'register');
-    }).catch(() => {
+    }).catch((e) => {
+      console.log('[Faces] getWorkers error:', e?.message);
       setScreen('register');
     });
   }, []);

@@ -8,15 +8,30 @@ final class FaceEmbedder {
     private static let resourceBundle = Bundle(for: FaceEmbedder.self)
     #endif
     private var model: MLModel?
+    var isModelLoaded: Bool { model != nil }
 
     init() { loadModel() }
 
     private func loadModel() {
         let bundle = FaceEmbedder.resourceBundle
-        let url = bundle.url(forResource: "MobileFaceNet", withExtension: "mlmodelc")
-            ?? bundle.url(forResource: "MobileFaceNet", withExtension: "mlpackage")
-        guard let url else { return }
-        model = try? MLModel(contentsOf: url)
+
+        // Try a pre-compiled .mlmodelc in the bundle first (fast path)
+        if let url = bundle.url(forResource: "MobileFaceNet", withExtension: "mlmodelc"),
+           let m = try? MLModel(contentsOf: url) {
+            model = m; return
+        }
+
+        // Fall back: compile the .mlpackage at runtime, caching the result
+        guard let pkgURL = bundle.url(forResource: "MobileFaceNet", withExtension: "mlpackage") else { return }
+        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
+            .first!.appendingPathComponent("FacesKit")
+        let cachedURL = cacheDir.appendingPathComponent("MobileFaceNet.mlmodelc")
+        if !FileManager.default.fileExists(atPath: cachedURL.path) {
+            guard let compiledURL = try? MLModel.compileModel(at: pkgURL) else { return }
+            try? FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+            _ = try? FileManager.default.replaceItemAt(cachedURL, withItemAt: compiledURL)
+        }
+        model = try? MLModel(contentsOf: cachedURL)
     }
 
     func embed(image: CGImage) throws -> [Float] {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView,
 } from 'react-native';
@@ -8,9 +8,14 @@ import FaceID from 'react-native-faces';
 interface Props { onDone: () => void }
 
 export default function RegistrationScreen({ onDone }: Props) {
-  const [name, setName]     = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [status, setStatus] = useState('');
+  const [name, setName]       = useState('');
+  const [photos, setPhotos]   = useState<string[]>([]);
+  const [status, setStatus]   = useState('');
+  const [modelOk, setModelOk] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    FaceID.isModelLoaded().then(setModelOk).catch(() => setModelOk(false));
+  }, []);
 
   const capture = async () => {
     const result = await launchCamera({ mediaType: 'photo', cameraType: 'front' });
@@ -22,7 +27,10 @@ export default function RegistrationScreen({ onDone }: Props) {
     if (!name.trim() || photos.length < 3) return;
     setStatus('Saving...');
     try {
+      console.log('[Faces] registerWorker photos:', JSON.stringify(photos));
       await FaceID.registerWorker(Date.now().toString(), name.trim(), photos);
+      const workers = await FaceID.getWorkers();
+      console.log('[Faces] after register, getWorkers:', JSON.stringify(workers));
       setStatus('Saved!');
       setPhotos([]);
       setName('');
@@ -75,6 +83,14 @@ export default function RegistrationScreen({ onDone }: Props) {
       </TouchableOpacity>
 
       <Text accessibilityLabel="registration.status" style={styles.status}>{status}</Text>
+
+      <Text style={[styles.modelStatus, modelOk === null && styles.modelUnknown,
+                                        modelOk === true  && styles.modelLoaded,
+                                        modelOk === false && styles.modelMissing]}>
+        {modelOk === null  ? 'Model: checking…'
+       : modelOk === true  ? 'Model: loaded ✓'
+                           : 'Model: NOT loaded ✗'}
+      </Text>
     </View>
   );
 }
@@ -89,6 +105,10 @@ const styles = StyleSheet.create({
   disabled:  { opacity: 0.4 },
   buttonText:    { color: '#fff', fontWeight: '600', fontSize: 16 },
   status:        { fontSize: 14, color: '#555', textAlign: 'center' },
+  modelStatus:   { fontSize: 13, textAlign: 'center', marginTop: 8 },
+  modelUnknown:  { color: '#999' },
+  modelLoaded:   { color: '#34a853' },
+  modelMissing:  { color: '#d93025' },
   thumbnailRow:  { flexDirection: 'row' },
   thumbnail:     { width: 72, height: 72, borderRadius: 8, marginRight: 8 },
 });

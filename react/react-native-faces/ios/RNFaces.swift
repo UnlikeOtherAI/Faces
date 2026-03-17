@@ -76,6 +76,11 @@ class RNFaces: RCTEventEmitter {
         }
     }
 
+    @objc func isModelLoaded(_ resolve: @escaping RCTPromiseResolveBlock,
+                             rejecter reject: @escaping RCTPromiseRejectBlock) {
+        resolve(FacesKit.shared.isModelLoaded())
+    }
+
     @objc func getWorkers(_ resolve: @escaping RCTPromiseResolveBlock,
                           rejecter reject: @escaping RCTPromiseRejectBlock) {
         let workers = FacesKit.shared.workers().map { w -> [String: Any] in

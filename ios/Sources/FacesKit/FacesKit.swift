@@ -57,6 +57,7 @@ public final class FacesKit: NSObject {
         try store.delete(workerId: workerId)
     }
     public func workers() -> [Worker] { store.all() }
+    public func isModelLoaded() -> Bool { embedder.isModelLoaded }
 
     private func handleFrame(_ buffer: CVPixelBuffer) {
         frameCounter += 1
