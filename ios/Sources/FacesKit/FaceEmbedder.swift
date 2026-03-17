@@ -12,8 +12,10 @@ final class FaceEmbedder {
     init() { loadModel() }
 
     private func loadModel() {
-        guard let url = FaceEmbedder.resourceBundle.url(forResource: "MobileFaceNet",
-                                          withExtension: "mlpackage") else { return }
+        let bundle = FaceEmbedder.resourceBundle
+        let url = bundle.url(forResource: "MobileFaceNet", withExtension: "mlmodelc")
+            ?? bundle.url(forResource: "MobileFaceNet", withExtension: "mlpackage")
+        guard let url else { return }
         model = try? MLModel(contentsOf: url)
     }
 
