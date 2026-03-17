@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, random_split
 
 from architecture.mobilefacenet import MobileFaceNet
 from architecture.arcface import ArcFaceHead
-from dataset.face_dataset import FaceDataset, default_transform, val_transform
+from dataset.face_dataset import FaceDataset, train_transform, val_transform
 
 
 def train(args: argparse.Namespace) -> None:
@@ -28,7 +28,7 @@ def train(args: argparse.Namespace) -> None:
     )
     print(f"Training on: {device}")
 
-    full_ds = FaceDataset(Path(args.data), transform=default_transform())
+    full_ds = FaceDataset(Path(args.data), transform=train_transform())
     n_val = max(1, int(len(full_ds) * 0.02))
     train_ds, val_ds = random_split(full_ds, [len(full_ds) - n_val, n_val])
     val_ds.dataset.transform = val_transform()

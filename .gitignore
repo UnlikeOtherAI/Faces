@@ -46,6 +46,8 @@ DerivedData/
 
 # TFLite / CoreML generated/compiled models
 *.mlmodelc/
+*.mlpackage/
+*.tflite
 *.tflite.bin
 
 # Env / secrets

@@ -5,51 +5,60 @@ Usage:
         --onnx   model.onnx \\
         --output android/src/main/assets/mobilefacenet.tflite
 
-Pipeline: ONNX → TensorFlow SavedModel → TFLite (float32, then optionally INT8).
+Pipeline: ONNX → TensorFlow SavedModel (onnx-tf) → TFLite.
 """
 
 import argparse
-import shutil
+import tempfile
 from pathlib import Path
 
 import numpy as np
+import onnx
+
+
+def _sanitize_names(model_proto) -> None:
+    """Replace dots in tensor names with underscores (TF rejects dots)."""
+    rename = {
+        t.name: t.name.replace(".", "_")
+        for t in list(model_proto.graph.input)
+        + list(model_proto.graph.output)
+        + list(model_proto.graph.value_info)
+        if "." in t.name
+    }
+    if not rename:
+        return
+    for t in list(model_proto.graph.input) + list(model_proto.graph.output) + list(model_proto.graph.value_info):
+        if t.name in rename:
+            t.name = rename[t.name]
+    for node in model_proto.graph.node:
+        node.input[:] = [rename.get(n, n) for n in node.input]
+        node.output[:] = [rename.get(n, n) for n in node.output]
 
 
 def convert(onnx_path: Path, output_path: Path, quantize: bool = False) -> None:
-    import onnx
-    from onnx_tf.backend import prepare
+    import onnx_tf.backend as onnx_tf_backend
     import tensorflow as tf
 
-    print(f"Loading ONNX: {onnx_path}")
-    onnx_model = onnx.load(str(onnx_path))
+    print(f"Converting ONNX → TFLite: {onnx_path}")
 
-    saved_model_dir = onnx_path.parent / "_tf_saved_model"
-    if saved_model_dir.exists():
-        shutil.rmtree(saved_model_dir)
+    model_proto = onnx.load(str(onnx_path))
+    _sanitize_names(model_proto)
 
-    print("Converting ONNX → TF SavedModel...")
-    tf_rep = prepare(onnx_model)
-    tf_rep.export_graph(str(saved_model_dir))
+    with tempfile.TemporaryDirectory() as saved_model_dir:
+        tf_rep = onnx_tf_backend.prepare(model_proto)
+        tf_rep.export_graph(saved_model_dir)
 
-    print("Converting SavedModel → TFLite...")
-    converter = tf.lite.TFLiteConverter.from_saved_model(str(saved_model_dir))
-    converter.target_spec.supported_ops = [
-        tf.lite.OpsSet.TFLITE_BUILTINS,
-        tf.lite.OpsSet.SELECT_TF_OPS,
-    ]
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-
-    if quantize:
-        # Dynamic-range quantisation — shrinks model, small accuracy cost
-        print("  Applying dynamic-range quantisation...")
-
-    tflite_model = converter.convert()
+        converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
+        if quantize:
+            print("  Applying dynamic-range quantisation...")
+            converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        tflite_model = converter.convert()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(tflite_model)
     print(f"Saved TFLite model: {output_path}  ({len(tflite_model) / 1024:.1f} KB)")
 
-    # Verify with TFLite interpreter
+    # Verify
     interpreter = tf.lite.Interpreter(model_content=tflite_model)
     interpreter.allocate_tensors()
     inp = interpreter.get_input_details()[0]
@@ -59,9 +68,7 @@ def convert(onnx_path: Path, output_path: Path, quantize: bool = False) -> None:
     interpreter.invoke()
     embedding = interpreter.get_tensor(out["index"])[0]
     norm = np.linalg.norm(embedding)
-    print(f"Verification — output shape: {embedding.shape}  L2 norm: {norm:.6f}  (expect ~1.0)")
-
-    shutil.rmtree(saved_model_dir, ignore_errors=True)
+    print(f"Verification — output shape: {embedding.shape}  L2 norm: {norm:.4f}")
 
 
 def main() -> None:

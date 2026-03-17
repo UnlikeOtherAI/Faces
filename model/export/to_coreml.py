@@ -16,12 +16,21 @@ from pathlib import Path
 
 import coremltools as ct
 import numpy as np
+import onnx
+import onnx2torch
+import torch
 
 
 def convert(onnx_path: Path, output_path: Path) -> None:
     print(f"Loading ONNX: {onnx_path}")
+    torch_model = onnx2torch.convert(str(onnx_path))
+    torch_model.train(False)
+
+    dummy = torch.zeros(1, 3, 112, 112)
+    traced = torch.jit.trace(torch_model, dummy)
+
     model = ct.convert(
-        str(onnx_path),
+        traced,
         convert_to="mlprogram",
         inputs=[
             ct.TensorType(
@@ -32,19 +41,21 @@ def convert(onnx_path: Path, output_path: Path) -> None:
         ],
         outputs=[ct.TensorType(name="embedding", dtype=np.float32)],
         minimum_deployment_target=ct.target.iOS16,
-        compute_units=ct.ComputeUnit.ALL,  # uses ANE where available
+        compute_units=ct.ComputeUnit.ALL,
     )
 
-    model.short_description = "MobileFaceNet face embedding — 128-dim L2-normalised"
-    model.input_description["input"]     = "Face crop 112x112, RGB, normalised to [-1,1]"
-    model.output_description["embedding"] = "128-dim L2-normalised face embedding"
+    import onnx as _onnx
+    _m = _onnx.load(str(onnx_path))
+    _dim = _m.graph.output[0].type.tensor_type.shape.dim[1].dim_value
+    model.short_description = f"MobileFaceNet face embedding — {_dim}-dim L2-normalised"
+    model.input_description["input"]      = "Face crop 112x112, RGB, normalised to [-1,1]"
+    model.output_description["embedding"] = f"{_dim}-dim L2-normalised face embedding"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     model.save(str(output_path))
     print(f"Saved CoreML model: {output_path}")
 
     # Verify
-    import torch
     dummy = np.random.randn(1, 3, 112, 112).astype(np.float32)
     out = model.predict({"input": dummy})
     embedding = out["embedding"]

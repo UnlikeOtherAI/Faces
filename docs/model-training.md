@@ -22,7 +22,7 @@ The model is not included in this repo. You train your own from a dataset of you
 
 | Dataset | Type | Identities | Notes |
 |---------|------|-----------|-------|
-| DigiFace-1M | Synthetic | 10,006 | No privacy concerns, scriptable download |
+| DigiFace-1M | Synthetic | 10,000 (72-img) + 100,000 (5-img) | No privacy concerns, scriptable download |
 | Glint360K | Real | 360,000 | Best accuracy, web-scraped |
 | MS1MV3 | Real | 93,000 | Cleaned MS-Celeb, web-scraped |
 | VGGFace2 | Real | 9,131 | Registration required |

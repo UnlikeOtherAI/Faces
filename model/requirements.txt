@@ -1,10 +1,13 @@
 torch>=2.2
 torchvision>=0.17
-onnx>=1.15
+onnx>=1.15,<1.17
 onnxruntime>=1.17
 coremltools>=7.2
-tensorflow>=2.14
-onnx-tf>=1.10
+onnx2torch
+tensorflow==2.15.1
+tensorflow-probability==0.23.0
+tf-keras
+onnx-tf
 Pillow
 tqdm
 numpy
