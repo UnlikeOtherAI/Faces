@@ -8,6 +8,7 @@ public final class FacesKit: NSObject {
 
     public var threshold: Float = 0.70
     public var onMatch: ((MatchResult) -> Void)?
+    public var onAllScores: (([MatchResult]) -> Void)?
 
     private let camera = CameraEngine()
     private let detector = FaceDetector()
@@ -69,9 +70,16 @@ public final class FacesKit: NSObject {
             guard var emb = try? embedder.embed(image: crop) else { return }
             l2Normalize(&emb)
             let workers = store.all()
+            let latency = Date().timeIntervalSince(start) * 1000
+
+            if self.onAllScores != nil {
+                let all = self.matcher.allScores(embedding: emb, workers: workers)
+                    .map { MatchResult(worker: $0.worker, score: $0.score, latencyMs: latency) }
+                DispatchQueue.main.async { self.onAllScores?(all) }
+            }
+
             guard let result = matcher.bestMatch(embedding: emb, workers: workers,
                                                   threshold: threshold) else { return }
-            let latency = Date().timeIntervalSince(start) * 1000
             let match = MatchResult(worker: result.worker, score: result.score, latencyMs: latency)
             DispatchQueue.main.async { self.onMatch?(match) }
         }

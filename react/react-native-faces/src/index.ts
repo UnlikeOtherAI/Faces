@@ -40,6 +40,11 @@ const FaceID = {
     const sub = emitter.addListener('onFaceRecognized', callback);
     return () => sub.remove();
   },
+
+  onAllScores: (callback: (scores: MatchResult[]) => void): (() => void) => {
+    const sub = emitter.addListener('onAllScores', callback);
+    return () => sub.remove();
+  },
 };
 
 export default FaceID;

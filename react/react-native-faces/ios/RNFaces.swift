@@ -6,7 +6,7 @@ import UIKit
 class RNFaces: RCTEventEmitter {
 
     override func supportedEvents() -> [String]! {
-        ["onFaceRecognized"]
+        ["onFaceRecognized", "onAllScores"]
     }
 
     override func startObserving() {
@@ -18,10 +18,22 @@ class RNFaces: RCTEventEmitter {
                 "latencyMs":  match.latencyMs,
             ])
         }
+        FacesKit.shared.onAllScores = { [weak self] scores in
+            let body = scores.map { match -> [String: Any] in
+                [
+                    "workerId":   match.worker.id,
+                    "workerName": match.worker.name,
+                    "score":      match.score,
+                    "latencyMs":  match.latencyMs,
+                ]
+            }
+            self?.sendEvent(withName: "onAllScores", body: body)
+        }
     }
 
     override func stopObserving() {
         FacesKit.shared.onMatch = nil
+        FacesKit.shared.onAllScores = nil
     }
 
     @objc func startRecognition(_ resolve: @escaping RCTPromiseResolveBlock,

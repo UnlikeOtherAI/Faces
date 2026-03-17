@@ -17,6 +17,10 @@ final class FaceMatcher {
         return best
     }
 
+    func allScores(embedding: [Float], workers: [Worker]) -> [Candidate] {
+        workers.map { Candidate(worker: $0, score: cosineSimilarity(embedding, $0.averageEmbedding)) }
+    }
+
     private func cosineSimilarity(_ a: [Float], _ b: [Float]) -> Float {
         guard a.count == b.count, !a.isEmpty else { return 0 }
         return zip(a, b).reduce(0) { $0 + $1.0 * $1.1 }
