@@ -18,10 +18,9 @@ targets:
         script: |
           set -e
           export NODE_BINARY=$(command -v node)
-          REACT_NATIVE_PATH="${PODS_ROOT}/../../node_modules/react-native"
-          WITH_ENVIRONMENT="${REACT_NATIVE_PATH}/scripts/xcode/with-environment.sh"
-          REACT_NATIVE_XCODE="${REACT_NATIVE_PATH}/scripts/react-native-xcode.sh"
-          /bin/sh -c "$WITH_ENVIRONMENT $REACT_NATIVE_XCODE"
+          RN_DIR="/System/Volumes/Data/.internal/projects/Projects/Faces/examples/registration/node_modules/react-native"
+          export HERMES_CLI_PATH="/System/Volumes/Data/.internal/projects/Projects/Faces/examples/registration/ios/Pods/hermes-engine/destroot/bin/hermesc"
+          /bin/sh -c "$RN_DIR/scripts/xcode/with-environment.sh $RN_DIR/scripts/react-native-xcode.sh"
         basedOnDependencyAnalysis: false
     settings:
       base:
