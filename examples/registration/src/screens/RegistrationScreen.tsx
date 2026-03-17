@@ -3,7 +3,10 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView,
 } from 'react-native';
 import { launchCamera } from 'react-native-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import FaceID from 'react-native-faces';
+
+const DRAFT_KEY = 'registration_draft';
 
 interface Props { onDone: () => void }
 
@@ -13,9 +16,23 @@ export default function RegistrationScreen({ onDone }: Props) {
   const [status, setStatus]   = useState('');
   const [modelOk, setModelOk] = useState<boolean | null>(null);
 
+  // Restore draft on mount
   useEffect(() => {
+    AsyncStorage.getItem(DRAFT_KEY).then(raw => {
+      if (!raw) return;
+      try {
+        const { name: n, photos: p } = JSON.parse(raw);
+        if (n) setName(n);
+        if (Array.isArray(p) && p.length) setPhotos(p);
+      } catch {}
+    });
     FaceID.isModelLoaded().then(setModelOk).catch(() => setModelOk(false));
   }, []);
+
+  // Persist draft whenever name or photos change
+  useEffect(() => {
+    AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({ name, photos }));
+  }, [name, photos]);
 
   const capture = async () => {
     const result = await launchCamera({ mediaType: 'photo', cameraType: 'front' });
@@ -34,6 +51,7 @@ export default function RegistrationScreen({ onDone }: Props) {
       setStatus('Saved!');
       setPhotos([]);
       setName('');
+      AsyncStorage.removeItem(DRAFT_KEY);
       onDone();
     } catch (e: any) {
       setStatus('Error: ' + e.message);
