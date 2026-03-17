@@ -8,6 +8,12 @@ Cross-platform face identification library for in-app multi-user authentication.
 
 Identifies users by face in under 300ms. Runs entirely on-device — no cloud.
 
+## Screenshots
+
+| Users | Identify All | Quick ID |
+|:-----:|:------------:|:--------:|
+| <img src="docs/screenshots/users.png" width="240" /> | <img src="docs/screenshots/identify-all.png" width="240" /> | <img src="docs/screenshots/quick-id.png" width="240" /> |
+
 ---
 
 ## Structure
@@ -252,12 +258,6 @@ After export, rebuild the iOS and Android projects — the model is bundled as a
 | CPU usage | < 40% |
 
 ---
-
-## Screenshots
-
-| Users | Identify All | Quick ID |
-|:-----:|:------------:|:--------:|
-| <img src="docs/screenshots/users.png" width="240" /> | <img src="docs/screenshots/identify-all.png" width="240" /> | <img src="docs/screenshots/quick-id.png" width="240" /> |
 
 ## Example apps
 
