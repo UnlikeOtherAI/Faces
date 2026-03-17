@@ -32,12 +32,11 @@ export default function IdentifyAllScreen() {
     const unsub = FaceID.onAllScores((results: MatchResult[]) => {
       setScores(
         results
-          .filter(r => r.score >= THRESHOLD)
           .map(r => ({
             id: r.workerId,
             name: r.workerName,
             photoUri: workers.find(w => w.id === r.workerId)?.photoUri,
-            score: r.score,
+            score: r.score >= THRESHOLD ? r.score : 0,
           }))
           .sort((a, b) => b.score - a.score),
       );
