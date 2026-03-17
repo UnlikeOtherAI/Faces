@@ -9,8 +9,10 @@ public final class FacesKit: NSObject {
     public var threshold: Float = 0.70
     public var onMatch: ((MatchResult) -> Void)?
     public var onAllScores: (([MatchResult]) -> Void)?
+    public var onFaceRect: ((CGRect, String?) -> Void)?
 
     private let camera = CameraEngine()
+    public var captureSession: AVCaptureSession { camera.session }
     private let detector = FaceDetector()
     private let embedder = FaceEmbedder()
     private let matcher = FaceMatcher()
@@ -66,7 +68,21 @@ public final class FacesKit: NSObject {
         guard let image = cgImage(from: buffer) else { return }
         processingQueue.async { [self] in
             let start = Date()
-            guard let crop = try? detector.detectAndCrop(image: image) else { return }
+
+            // Get face rect for overlay (before crop)
+            let faceRect = try? detector.detectNormalized(image: image)
+
+            guard let crop = try? detector.detectAndCrop(image: image) else {
+                if self.onFaceRect != nil {
+                    DispatchQueue.main.async { self.onFaceRect?(CGRect.zero, nil) }
+                }
+                if self.onAllScores != nil {
+                    let workers = store.all()
+                    let zeros = workers.map { MatchResult(worker: $0, score: 0, latencyMs: 0) }
+                    DispatchQueue.main.async { self.onAllScores?(zeros) }
+                }
+                return
+            }
             guard var emb = try? embedder.embed(image: crop) else { return }
             l2Normalize(&emb)
             let workers = store.all()
@@ -78,8 +94,13 @@ public final class FacesKit: NSObject {
                 DispatchQueue.main.async { self.onAllScores?(all) }
             }
 
-            guard let result = matcher.bestMatch(embedding: emb, workers: workers,
-                                                  threshold: threshold) else { return }
+            let bestResult = matcher.bestMatch(embedding: emb, workers: workers, threshold: threshold)
+
+            if let rect = faceRect, self.onFaceRect != nil {
+                DispatchQueue.main.async { self.onFaceRect?(rect, bestResult?.worker.name) }
+            }
+
+            guard let result = bestResult else { return }
             let match = MatchResult(worker: result.worker, score: result.score, latencyMs: latency)
             DispatchQueue.main.async { self.onMatch?(match) }
         }

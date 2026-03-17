@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Switch, StyleSheet } from 'react-native';
 import FaceID, { MatchResult } from 'react-native-faces';
 
@@ -6,51 +6,44 @@ export default function QuickIdScreen() {
   const [preload, setPreload] = useState(false);
   const [identifying, setIdentifying] = useState(false);
   const [result, setResult] = useState<{ name: string; score: number; timeMs: number } | null>(null);
-  const startTimeRef = useRef<number>(0);
-  const unsubRef = useRef<(() => void) | null>(null);
-  const cameraActiveRef = useRef(false);
+  const [cameraOn, setCameraOn] = useState(false);
+  const startTime = useRef(0);
 
-  // Manage preloaded camera
+  // Start/stop camera based on preload toggle
   useEffect(() => {
-    if (preload && !cameraActiveRef.current) {
-      FaceID.startRecognition();
-      cameraActiveRef.current = true;
+    if (preload) {
+      FaceID.startRecognition().then(() => setCameraOn(true));
+    } else if (cameraOn && !identifying) {
+      FaceID.stopRecognition().then(() => setCameraOn(false));
     }
-    if (!preload && !identifying && cameraActiveRef.current) {
-      FaceID.stopRecognition();
-      cameraActiveRef.current = false;
-    }
-    return () => {
-      if (cameraActiveRef.current) {
-        FaceID.stopRecognition();
-        cameraActiveRef.current = false;
-      }
-    };
-  }, [preload, identifying]);
+  }, [preload]);
 
-  const handleIdentify = useCallback(() => {
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { FaceID.stopRecognition(); };
+  }, []);
+
+  const handleIdentify = () => {
     setIdentifying(true);
     setResult(null);
-    startTimeRef.current = performance.now();
+    startTime.current = Date.now();
 
-    if (!cameraActiveRef.current) {
-      FaceID.startRecognition();
-      cameraActiveRef.current = true;
-    }
+    const startCamera = cameraOn
+      ? Promise.resolve()
+      : FaceID.startRecognition().then(() => setCameraOn(true));
 
-    unsubRef.current = FaceID.onFaceRecognized((match: MatchResult) => {
-      const elapsed = performance.now() - startTimeRef.current;
-      setResult({ name: match.workerName, score: match.score, timeMs: elapsed });
-      setIdentifying(false);
-      unsubRef.current?.();
-      unsubRef.current = null;
-
-      if (!preload) {
-        FaceID.stopRecognition();
-        cameraActiveRef.current = false;
-      }
+    startCamera.then(() => {
+      const unsub = FaceID.onFaceRecognized((match: MatchResult) => {
+        const elapsed = Date.now() - startTime.current;
+        setResult({ name: match.workerName, score: match.score, timeMs: elapsed });
+        setIdentifying(false);
+        unsub();
+        if (!preload) {
+          FaceID.stopRecognition().then(() => setCameraOn(false));
+        }
+      });
     });
-  }, [preload]);
+  };
 
   return (
     <View style={styles.container}>
@@ -60,12 +53,11 @@ export default function QuickIdScreen() {
         <Text style={styles.toggleLabel}>Preload camera</Text>
         <Switch
           value={preload}
-          onValueChange={setPreload}
-          disabled={identifying}
+          onValueChange={v => { if (!identifying) setPreload(v); }}
         />
       </View>
       <Text style={styles.toggleHint}>
-        {preload ? 'Camera is always active — faster identification' : 'Camera starts on tap — measures full startup time'}
+        {preload ? 'Camera always active — faster ID' : 'Camera starts on tap — measures full startup'}
       </Text>
 
       <View style={styles.center}>
@@ -74,6 +66,7 @@ export default function QuickIdScreen() {
           style={[styles.identifyButton, identifying && styles.identifyButtonActive]}
           onPress={handleIdentify}
           disabled={identifying}
+          activeOpacity={0.7}
         >
           <Text style={styles.identifyButtonText}>
             {identifying ? 'Identifying...' : 'Identify'}
@@ -88,7 +81,7 @@ export default function QuickIdScreen() {
             {Math.round(result.score * 100)}% match
           </Text>
           <Text style={styles.resultTime}>
-            {result.timeMs.toFixed(0)} ms
+            {result.timeMs} ms
           </Text>
         </View>
       )}

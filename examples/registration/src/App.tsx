@@ -65,8 +65,8 @@ const styles = StyleSheet.create({
   content:        { flex: 1 },
   tabBar:         { flexDirection: 'row', borderTopWidth: 1, borderColor: '#e0e0e0', paddingBottom: 4 },
   tab:            { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  tabIcon:        { width: 28, height: 28, borderRadius: 6 },
-  tabIconInactive: { opacity: 0.4 },
-  tabLabel:       { fontSize: 11, color: '#999', marginTop: 2 },
-  tabLabelActive: { color: '#1a73e8', fontWeight: '600' },
+  tabIcon:         { width: 28, height: 28, borderRadius: 6, marginBottom: 4 },
+  tabIconInactive: { opacity: 0.3 },
+  tabLabel:        { fontSize: 13, color: '#999' },
+  tabLabelActive:  { color: '#000', fontWeight: '600' },
 });

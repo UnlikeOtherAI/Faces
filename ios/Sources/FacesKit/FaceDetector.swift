@@ -4,6 +4,12 @@ import CoreGraphics
 final class FaceDetector {
     private let request = VNDetectFaceRectanglesRequest()
 
+    func detectNormalized(image: CGImage) throws -> CGRect? {
+        let handler = VNImageRequestHandler(cgImage: image, options: [:])
+        try handler.perform([request])
+        return request.results?.first?.boundingBox
+    }
+
     func detectAndCrop(image: CGImage) throws -> CGImage? {
         let handler = VNImageRequestHandler(cgImage: image, options: [:])
         try handler.perform([request])

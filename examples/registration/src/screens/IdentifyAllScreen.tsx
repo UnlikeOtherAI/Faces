@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
-import FaceID, { MatchResult, Worker } from 'react-native-faces';
+import FaceID, { MatchResult, Worker, FacesCameraView } from 'react-native-faces';
 
 interface WorkerScore {
   id: string;
@@ -18,7 +18,17 @@ export default function IdentifyAllScreen() {
   }, []);
 
   useEffect(() => {
-    FaceID.startRecognition();
+    console.log('[IdentifyAll] Starting recognition, workers:', workers.length);
+    FaceID.startRecognition()
+      .then(() => console.log('[IdentifyAll] startRecognition resolved'))
+      .catch((e: any) => console.log('[IdentifyAll] startRecognition error:', e?.message));
+
+    // Also listen for single matches to verify pipeline works
+    const unsubMatch = FaceID.onFaceRecognized((m: MatchResult) => {
+      console.log('[IdentifyAll] Got single match:', m.workerName, m.score);
+    });
+
+    const THRESHOLD = 0.5;
     const unsub = FaceID.onAllScores((results: MatchResult[]) => {
       setScores(
         results
@@ -26,21 +36,23 @@ export default function IdentifyAllScreen() {
             id: r.workerId,
             name: r.workerName,
             photoUri: workers.find(w => w.id === r.workerId)?.photoUri,
-            score: r.score,
+            score: r.score >= THRESHOLD ? r.score : 0,
           }))
           .sort((a, b) => b.score - a.score),
       );
     });
     return () => {
       unsub();
+      unsubMatch();
       FaceID.stopRecognition();
     };
   }, [workers]);
 
   return (
     <View style={styles.container}>
+      <FacesCameraView style={styles.camera} />
+
       <Text style={styles.title}>Identify All</Text>
-      <Text style={styles.subtitle}>Point the camera at someone</Text>
 
       {scores.length === 0 && workers.length === 0 && (
         <Text style={styles.empty}>No registered users. Register someone first.</Text>
@@ -75,8 +87,8 @@ export default function IdentifyAllScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24 },
+  camera:    { height: 120, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
   title:     { fontSize: 24, fontWeight: '700', marginBottom: 4 },
-  subtitle:  { fontSize: 14, color: '#666', marginBottom: 16 },
   empty:     { textAlign: 'center', color: '#999', marginTop: 40 },
   row:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#eee' },
   info:      { flex: 1 },

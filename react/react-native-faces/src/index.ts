@@ -1,4 +1,4 @@
-import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import { NativeEventEmitter, NativeModules, Platform, requireNativeComponent } from 'react-native';
 import type { Worker, MatchResult } from './NativeFaces';
 
 const LINKING_ERROR =
@@ -46,6 +46,8 @@ const FaceID = {
     return () => sub.remove();
   },
 };
+
+export const FacesCameraView = requireNativeComponent('RNFacesCameraView');
 
 export default FaceID;
 export type { Worker, MatchResult };

@@ -126,7 +126,15 @@ class RNFaces: RCTEventEmitter {
                 "lastUpdated": w.lastUpdated.timeIntervalSince1970 * 1000,
             ]
             if let path = w.photoPath {
-                dict["photoUri"] = "file://\(path)"
+                let filename = (path as NSString).lastPathComponent
+                let photosDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+                    .first!.appendingPathComponent("FacesKit/photos")
+                let resolvedPath = photosDir.appendingPathComponent(filename).path
+                if FileManager.default.fileExists(atPath: resolvedPath) {
+                    dict["photoUri"] = "file://\(resolvedPath)"
+                } else if FileManager.default.fileExists(atPath: path) {
+                    dict["photoUri"] = "file://\(path)"
+                }
             }
             return dict
         }
