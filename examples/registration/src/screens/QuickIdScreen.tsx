@@ -49,7 +49,7 @@ export default function QuickIdScreen() {
         cleanupRef.current = null;
 
         const elapsed = Date.now() - startTime.current;
-        if (match && match.score > 0.3) {
+        if (match && match.score > 0.7) {
           setResult({ name: match.workerName, score: match.score, timeMs: elapsed });
         } else {
           setResult({ name: 'No match', score: 0, timeMs: elapsed });
