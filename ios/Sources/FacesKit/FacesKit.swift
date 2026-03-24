@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import CoreImage
+import ImageIO
 
 @available(macOS 10.15, *)
 public final class FacesKit: NSObject {
@@ -8,9 +9,12 @@ public final class FacesKit: NSObject {
 
     public var threshold: Float = 0.60
     public var requiredStreak: Int = 3
+    public var captureUnknownFaces: Bool = false
+    public var unknownFaceStreak: Int = 3
     public var onMatch: ((MatchResult) -> Void)?
     public var onAllScores: (([MatchResult]) -> Void)?
     public var onFaceRect: ((CGRect, String?) -> Void)?
+    public var onUnknownFace: ((Worker) -> Void)?
 
     private let camera = CameraEngine()
     public var captureSession: AVCaptureSession { camera.session }
@@ -23,6 +27,10 @@ public final class FacesKit: NSObject {
     private let processEveryNthFrame = 3
     private var streakWorkerId: String?
     private var streakCount: Int = 0
+    private var unknownStreakCount: Int = 0
+    private var unknownCrops: [CGImage] = []
+    private var unknownEmbeddings: [[Float]] = []
+    private var unknownCooldownFrames: Int = 0
     private let processingQueue = DispatchQueue(label: "faceskit.processing", qos: .userInitiated)
 
     private override init() {
@@ -76,6 +84,7 @@ public final class FacesKit: NSObject {
             let faceRect = try? detector.detectNormalized(image: image)
 
             guard let crop = try? detector.detectAndCrop(image: image) else {
+                unknownStreakCount = 0; unknownCrops = []; unknownEmbeddings = []
                 if self.onFaceRect != nil {
                     DispatchQueue.main.async { self.onFaceRect?(CGRect.zero, nil) }
                 }
@@ -104,6 +113,7 @@ public final class FacesKit: NSObject {
             }
 
             if let result = bestResult {
+                unknownStreakCount = 0; unknownCrops = []; unknownEmbeddings = []
                 if result.worker.id == streakWorkerId {
                     streakCount += 1
                 } else {
@@ -116,8 +126,38 @@ public final class FacesKit: NSObject {
             } else {
                 streakWorkerId = nil
                 streakCount = 0
+                guard captureUnknownFaces else { return }
+                if unknownCooldownFrames > 0 { unknownCooldownFrames -= 1; return }
+                unknownStreakCount += 1
+                unknownCrops.append(crop)
+                unknownEmbeddings.append(emb)
+                guard unknownStreakCount >= unknownFaceStreak else { return }
+                let cropsToSave = unknownCrops
+                let embsToSave = unknownEmbeddings
+                unknownStreakCount = 0; unknownCrops = []; unknownEmbeddings = []
+                unknownCooldownFrames = 50
+                saveAsUnknown(crops: cropsToSave, embeddings: embsToSave)
             }
         }
+    }
+
+    private func saveAsUnknown(crops: [CGImage], embeddings: [[Float]]) {
+        let id = "unknown_\(Int(Date().timeIntervalSince1970 * 1000))"
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+            .first!.appendingPathComponent("FacesKit/unknown")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let photoURL = dir.appendingPathComponent("\(id).jpg")
+        saveJPEG(crops[0], to: photoURL)
+        let worker = Worker(id: id, name: "Unknown", embeddings: embeddings, photoPath: photoURL.path)
+        try? store.save(worker)
+        DispatchQueue.main.async { [self] in onUnknownFace?(worker) }
+    }
+
+    private func saveJPEG(_ image: CGImage, to url: URL) {
+        guard let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.jpeg" as CFString, 1, nil)
+        else { return }
+        CGImageDestinationAddImage(dest, image, nil)
+        CGImageDestinationFinalize(dest)
     }
 
     private func cgImage(from buffer: CVPixelBuffer) -> CGImage? {

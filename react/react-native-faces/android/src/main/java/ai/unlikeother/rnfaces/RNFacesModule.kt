@@ -31,7 +31,22 @@ class RNFacesModule(private val reactContext: ReactApplicationContext) :
             }
             emit("onFaceRecognized", map)
         }
+        FacesKit.onUnknownFace = { worker ->
+            val map = Arguments.createMap().apply {
+                putString("workerId",    worker.id)
+                putString("workerName",  worker.name)
+                putDouble("lastUpdated", worker.lastUpdated.toDouble())
+                worker.photoPath?.let { putString("photoUri", "file://$it") }
+            }
+            emit("onUnknownFace", map)
+        }
         FacesKit.start(reactContext)
+        promise.resolve(null)
+    }
+
+    @ReactMethod
+    fun setUnknownFaceCapture(enabled: Boolean, promise: Promise) {
+        FacesKit.captureUnknownFaces = enabled
         promise.resolve(null)
     }
 

@@ -24,6 +24,7 @@ export interface Spec extends TurboModule {
   clearDraftPhotos(): Promise<void>;
   isModelLoaded(): Promise<boolean>;
   getWorkers(): Promise<Worker[]>;
+  setUnknownFaceCapture(enabled: boolean): Promise<void>;
   addListener(eventType: string): void;
   removeListeners(count: number): void;
 }

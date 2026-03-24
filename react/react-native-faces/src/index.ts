@@ -45,6 +45,14 @@ const FaceID = {
     const sub = emitter.addListener('onAllScores', callback);
     return () => sub.remove();
   },
+
+  setUnknownFaceCapture: (enabled: boolean): Promise<void> =>
+    RNFaces.setUnknownFaceCapture(enabled),
+
+  onUnknownFace: (callback: (worker: Worker) => void): (() => void) => {
+    const sub = emitter.addListener('onUnknownFace', callback);
+    return () => sub.remove();
+  },
 };
 
 let _FacesCameraView: any = null;

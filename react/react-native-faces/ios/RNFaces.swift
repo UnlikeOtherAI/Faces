@@ -6,7 +6,7 @@ import UIKit
 class RNFaces: RCTEventEmitter {
 
     override func supportedEvents() -> [String]! {
-        ["onFaceRecognized", "onAllScores"]
+        ["onFaceRecognized", "onAllScores", "onUnknownFace"]
     }
 
     override func startObserving() {
@@ -29,11 +29,21 @@ class RNFaces: RCTEventEmitter {
             }
             self?.sendEvent(withName: "onAllScores", body: body)
         }
+        FacesKit.shared.onUnknownFace = { [weak self] worker in
+            var body: [String: Any] = [
+                "workerId":    worker.id,
+                "workerName":  worker.name,
+                "lastUpdated": worker.lastUpdated.timeIntervalSince1970 * 1000,
+            ]
+            if let path = worker.photoPath { body["photoUri"] = "file://\(path)" }
+            self?.sendEvent(withName: "onUnknownFace", body: body)
+        }
     }
 
     override func stopObserving() {
         FacesKit.shared.onMatch = nil
         FacesKit.shared.onAllScores = nil
+        FacesKit.shared.onUnknownFace = nil
     }
 
     @objc func startRecognition(_ resolve: @escaping RCTPromiseResolveBlock,
@@ -109,6 +119,13 @@ class RNFaces: RCTEventEmitter {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first!.appendingPathComponent("FacesKit/drafts")
         try? FileManager.default.removeItem(at: dir)
+        resolve(nil)
+    }
+
+    @objc func setUnknownFaceCapture(_ enabled: Bool,
+                                     resolver resolve: @escaping RCTPromiseResolveBlock,
+                                     rejecter reject: @escaping RCTPromiseRejectBlock) {
+        FacesKit.shared.captureUnknownFaces = enabled
         resolve(nil)
     }
 

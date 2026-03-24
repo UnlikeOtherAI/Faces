@@ -30,6 +30,10 @@ RCT_EXTERN_METHOD(persistPhoto:(NSString *)uri
 RCT_EXTERN_METHOD(clearDraftPhotos:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(setUnknownFaceCapture:(BOOL)enabled
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 RCT_EXTERN_METHOD(isModelLoaded:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
