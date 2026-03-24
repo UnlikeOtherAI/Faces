@@ -6,7 +6,8 @@ import CoreImage
 public final class FacesKit: NSObject {
     public static let shared = FacesKit()
 
-    public var threshold: Float = 0.70
+    public var threshold: Float = 0.60
+    public var requiredStreak: Int = 3
     public var onMatch: ((MatchResult) -> Void)?
     public var onAllScores: (([MatchResult]) -> Void)?
     public var onFaceRect: ((CGRect, String?) -> Void)?
@@ -20,6 +21,8 @@ public final class FacesKit: NSObject {
 
     private var frameCounter = 0
     private let processEveryNthFrame = 3
+    private var streakWorkerId: String?
+    private var streakCount: Int = 0
     private let processingQueue = DispatchQueue(label: "faceskit.processing", qos: .userInitiated)
 
     private override init() {
@@ -100,9 +103,20 @@ public final class FacesKit: NSObject {
                 DispatchQueue.main.async { self.onFaceRect?(rect, bestResult?.worker.name) }
             }
 
-            guard let result = bestResult else { return }
-            let match = MatchResult(worker: result.worker, score: result.score, latencyMs: latency)
-            DispatchQueue.main.async { self.onMatch?(match) }
+            if let result = bestResult {
+                if result.worker.id == streakWorkerId {
+                    streakCount += 1
+                } else {
+                    streakWorkerId = result.worker.id
+                    streakCount = 1
+                }
+                guard streakCount >= requiredStreak else { return }
+                let match = MatchResult(worker: result.worker, score: result.score, latencyMs: latency)
+                DispatchQueue.main.async { self.onMatch?(match) }
+            } else {
+                streakWorkerId = nil
+                streakCount = 0
+            }
         }
     }
 

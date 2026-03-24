@@ -4,7 +4,8 @@ import android.content.Context
 import kotlinx.coroutines.*
 
 object FacesKit {
-    var threshold: Float = 0.70f
+    var threshold: Float = 0.60f
+    var requiredStreak: Int = 3
     var onMatch: ((MatchResult) -> Unit)? = null
 
     private lateinit var appContext: Context
@@ -19,6 +20,8 @@ object FacesKit {
 
     private var frameCounter = 0
     private val processEveryNthFrame = 3
+    private var streakWorkerId: String? = null
+    private var streakCount: Int = 0
 
     fun start(context: Context) {
         appContext = context.applicationContext
@@ -73,9 +76,15 @@ object FacesKit {
         val crop = detector.detectAndCrop(bitmap) ?: return
         val emb = embedder.embed(crop).l2Normalize()
         val workers = store.all()
-        val result = matcher.bestMatch(emb, workers, threshold) ?: return
-        val latency = System.currentTimeMillis() - start
-        val match = MatchResult(result.worker, result.score, latency)
-        withContext(Dispatchers.Main) { onMatch?.invoke(match) }
+        val result = matcher.bestMatch(emb, workers, threshold)
+        if (result != null) {
+            if (result.worker.id == streakWorkerId) streakCount++ else { streakWorkerId = result.worker.id; streakCount = 1 }
+            if (streakCount < requiredStreak) return
+            val latency = System.currentTimeMillis() - start
+            withContext(Dispatchers.Main) { onMatch?.invoke(MatchResult(result.worker, result.score, latency)) }
+        } else {
+            streakWorkerId = null
+            streakCount = 0
+        }
     }
 }
