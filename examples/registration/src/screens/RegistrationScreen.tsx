@@ -40,6 +40,8 @@ interface CaptureState {
   blockReason?: string;
   detectedPose?: string;
   targetPose?: string;
+  yaw?: number;
+  verticalRatio?: number;
 }
 
 const ARC_RADIUS = 117;
@@ -205,6 +207,18 @@ export default function RegistrationScreen({ onDone }: Props) {
       />
 
       <View style={styles.captureCard}>
+        {captureState && !captureComplete && (
+          <View style={styles.debugRow}>
+            <Text style={[styles.debugArrow, {
+              transform: [{ rotate: `${-(captureState.yaw ?? 0) * 200}deg` }],
+            }]}>
+              {'\u2192'}
+            </Text>
+            <Text style={styles.debugVertNum}>
+              {(captureState.verticalRatio ?? 0).toFixed(2)}
+            </Text>
+          </View>
+        )}
         <Text accessibilityLabel="registration.photo_count" style={styles.count}>
           {`Captured: ${photos.length} / 6`}
         </Text>
@@ -296,6 +310,15 @@ const styles = StyleSheet.create({
     borderColor: '#f3e4ca',
     alignItems: 'center',
   },
+  debugRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    paddingHorizontal: 4,
+    marginBottom: 2,
+  },
+  debugArrow: { fontSize: 28, color: '#7a6a52' },
+  debugVertNum: { fontSize: 16, fontVariant: ['tabular-nums'], color: '#7a6a52', alignSelf: 'center' },
   count:     { fontSize: 16, color: '#7a6a52', marginBottom: 10 },
   previewWrap: { width: 260, height: 260, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   previewCircle: {

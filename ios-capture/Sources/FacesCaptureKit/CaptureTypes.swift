@@ -46,6 +46,8 @@ public struct CaptureState: Codable, Equatable {
     public let stable: Bool
     public let canCapture: Bool
     public let blockReason: CaptureBlockReason
+    public let yaw: Double
+    public let verticalRatio: Double
 
     public init(
         targetPose: CapturePose,
@@ -56,7 +58,9 @@ public struct CaptureState: Codable, Equatable {
         sharpnessOk: Bool = false,
         stable: Bool = false,
         canCapture: Bool = false,
-        blockReason: CaptureBlockReason = .notImplemented
+        blockReason: CaptureBlockReason = .notImplemented,
+        yaw: Double = 0,
+        verticalRatio: Double = 0
     ) {
         self.targetPose = targetPose
         self.detectedPose = detectedPose
@@ -67,6 +71,8 @@ public struct CaptureState: Codable, Equatable {
         self.stable = stable
         self.canCapture = canCapture
         self.blockReason = blockReason
+        self.yaw = yaw
+        self.verticalRatio = verticalRatio
     }
 }
 

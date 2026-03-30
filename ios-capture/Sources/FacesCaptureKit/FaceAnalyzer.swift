@@ -39,7 +39,8 @@ final class FaceAnalyzer {
         let insideGuide = isInsideGuide(rect)
         let lightingOk = lightingScore(buffer) >= 0.25
         let sharpnessOk = sharpnessScore(buffer) >= 0.018
-        let detectedPose = detectPose(face)
+        let poseResult = detectPose(face)
+        let detectedPose = poseResult.pose
         let stable = isStable(current: rect, previous: previousRect, detectedPose: detectedPose, targetPose: targetPose)
 
         let blockReason: CaptureBlockReason
@@ -69,13 +70,21 @@ final class FaceAnalyzer {
                 sharpnessOk: sharpnessOk,
                 stable: stable,
                 canCapture: blockReason == .none,
-                blockReason: blockReason
+                blockReason: blockReason,
+                yaw: poseResult.yaw,
+                verticalRatio: poseResult.verticalRatio
             ),
             landmarks: landmarkPoints
         )
     }
 
-    private func detectPose(_ face: VNFaceObservation) -> CapturePose {
+    private struct PoseResult {
+        let pose: CapturePose
+        let yaw: Double
+        let verticalRatio: Double
+    }
+
+    private func detectPose(_ face: VNFaceObservation) -> PoseResult {
         let yaw = face.yaw?.doubleValue ?? 0
         let landmarks = face.landmarks
 
@@ -85,9 +94,11 @@ final class FaceAnalyzer {
             let nose = averagePoint(landmarks?.nose),
             let outerLips = averagePoint(landmarks?.outerLips)
         else {
-            if yaw < -0.18 { return .topRight }
-            if yaw > 0.18 { return .leftTop }
-            return .straight
+            let fallback: CapturePose
+            if yaw < -0.18 { fallback = .topRight }
+            else if yaw > 0.18 { fallback = .leftTop }
+            else { fallback = .straight }
+            return PoseResult(pose: fallback, yaw: yaw, verticalRatio: 0)
         }
 
         let eyesMidX = (leftEye.x + rightEye.x) / 2
@@ -114,14 +125,16 @@ final class FaceAnalyzer {
             horizontalBucket = 0
         }
 
+        let pose: CapturePose
         switch (horizontalBucket, vertical) {
-        case (-1, 1): return .leftTop
-        case (1, 1): return .topRight
-        case (1, -1): return .bottomRight
-        case (-1, -1): return .bottomLeft
-        case (0, 1): return .top
-        default: return .straight
+        case (-1, 1): pose = .leftTop
+        case (1, 1): pose = .topRight
+        case (1, -1): pose = .bottomRight
+        case (-1, -1): pose = .bottomLeft
+        case (0, 1): pose = .top
+        default: pose = .straight
         }
+        return PoseResult(pose: pose, yaw: yaw, verticalRatio: verticalRatio)
     }
 
     private func averagePoint(_ region: VNFaceLandmarkRegion2D?) -> CGPoint? {

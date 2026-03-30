@@ -17,6 +17,8 @@ class RNFacesCapture: RCTEventEmitter {
                 "stable": state.stable,
                 "canCapture": state.canCapture,
                 "blockReason": state.blockReason.rawValue,
+                "yaw": state.yaw,
+                "verticalRatio": state.verticalRatio,
             ]
             if let detectedPose = state.detectedPose {
                 body["detectedPose"] = detectedPose.rawValue
