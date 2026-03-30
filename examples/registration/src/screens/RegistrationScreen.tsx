@@ -14,7 +14,7 @@ import { launchCamera } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FaceID from 'react-native-faces';
 import FacesCapture, { FacesCaptureView } from 'react-native-faces-capture';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 const DRAFT_KEY = 'registration_draft';
 const LIGHTING_MESSAGE = 'We cannot continue unless you get better lighting.';
@@ -207,18 +207,14 @@ export default function RegistrationScreen({ onDone }: Props) {
       />
 
       <View style={styles.captureCard}>
-        {captureState && !captureComplete && (
-          <View style={styles.debugRow}>
-            <Text style={[styles.debugArrow, {
-              transform: [{ rotate: `${-(captureState.yaw ?? 0) * 200}deg` }],
-            }]}>
-              {'\u2192'}
+        <View style={styles.debugRow}>
+          <View />
+          {captureState && !captureComplete && (
+            <Text style={styles.debugDist}>
+              {lookDistance(captureState).toFixed(2)}
             </Text>
-            <Text style={styles.debugVertNum}>
-              {(captureState.verticalRatio ?? 0).toFixed(2)}
-            </Text>
-          </View>
-        )}
+          )}
+        </View>
         <Text accessibilityLabel="registration.photo_count" style={styles.count}>
           {`Captured: ${photos.length} / 6`}
         </Text>
@@ -229,6 +225,8 @@ export default function RegistrationScreen({ onDone }: Props) {
             activeIndex={captureComplete ? -1 : Math.min(currentStepIndex, 4)}
             finalStepActive={!captureComplete && currentStep.pose === 'straight'}
             pulse={pulse}
+            yaw={captureState?.yaw ?? 0}
+            verticalRatio={captureState?.verticalRatio ?? 0.355}
           />
           <Animated.View
             style={[
@@ -316,9 +314,9 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     paddingHorizontal: 4,
     marginBottom: 2,
+    minHeight: 22,
   },
-  debugArrow: { fontSize: 28, color: '#7a6a52' },
-  debugVertNum: { fontSize: 16, fontVariant: ['tabular-nums'], color: '#7a6a52', alignSelf: 'center' },
+  debugDist: { fontSize: 16, fontVariant: ['tabular-nums'], color: '#7a6a52' },
   count:     { fontSize: 16, color: '#7a6a52', marginBottom: 10 },
   previewWrap: { width: 260, height: 260, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   previewCircle: {
@@ -356,17 +354,44 @@ const styles = StyleSheet.create({
   thumbnail:     { width: 72, height: 72, borderRadius: 12, marginRight: 8, borderWidth: 2, borderColor: '#f3dfb7' },
 });
 
+const NEUTRAL_VR = 0.355;
+
+function lookDistance(cs: CaptureState): number {
+  const h = Math.abs(cs.yaw ?? 0) / 0.4;
+  const v = Math.abs((cs.verticalRatio ?? NEUTRAL_VR) - NEUTRAL_VR) / 0.1;
+  return Math.min(Math.max(h, v), 1);
+}
+
+function lookAngleDeg(yaw: number, vr: number): number {
+  // dx: positive = looking right on screen, dy: positive = looking down
+  const dx = -yaw;
+  const dy = vr - NEUTRAL_VR;
+  return (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+}
+
+const DOT_RADIUS = ARC_RADIUS + ARC_STROKE / 2 + 4;
+
 function CaptureRing({
   completeCount,
   activeIndex,
   finalStepActive,
   pulse,
+  yaw,
+  verticalRatio,
 }: {
   completeCount: number;
   activeIndex: number;
   finalStepActive: boolean;
   pulse: Animated.Value;
+  yaw: number;
+  verticalRatio: number;
 }) {
+  const mag = Math.min(Math.max(Math.abs(yaw) / 0.4, Math.abs(verticalRatio - NEUTRAL_VR) / 0.1), 1);
+  const angleDeg = lookAngleDeg(yaw, verticalRatio);
+  const rad = (angleDeg * Math.PI) / 180;
+  const dotX = ARC_CX + DOT_RADIUS * Math.cos(rad);
+  const dotY = ARC_CY + DOT_RADIUS * Math.sin(rad);
+
   return (
     <Svg
       width={ARC_SIZE}
@@ -407,6 +432,9 @@ function CaptureRing({
           </React.Fragment>
         );
       })}
+      {mag > 0.08 && (
+        <Circle cx={dotX} cy={dotY} r={7} fill="#d93025" />
+      )}
     </Svg>
   );
 }
