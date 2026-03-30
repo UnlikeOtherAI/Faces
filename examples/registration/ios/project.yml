@@ -5,6 +5,10 @@ options:
   deploymentTarget:
     iOS: "16.0"
 
+packages:
+  AppReveal:
+    path: ../../../.packages/AppReveal/iOS
+
 targets:
   FacesRegistration:
     type: application
@@ -12,7 +16,9 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - path: FacesRegistration
-    dependencies: []
+    dependencies:
+      - package: AppReveal
+        product: AppReveal
     preBuildScripts:
       - name: "Bundle React Native code and images"
         script: |

@@ -34,7 +34,7 @@ The model is **not included**. Everyone trains their own from a dataset of their
 ## How it works
 
 ```
-Register user (3–5 photos)
+Register user (6 guided photos)
     → detect face → extract 128-dim embedding → store on device
 
 Live camera frame (every 3rd frame)
@@ -43,6 +43,9 @@ Live camera frame (every 3rd frame)
 ```
 
 Identification, not authentication. Speed over security.
+
+The guided registration UX for the example app is defined in
+`docs/registration-guided-capture.md`.
 
 ---
 

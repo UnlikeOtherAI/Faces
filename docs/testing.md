@@ -33,7 +33,7 @@ if (BuildConfig.DEBUG) {
 
 1. **Time displayed** — recognition timestamp is visible on screen and updates.
 2. **Identification result shown** — matched user name (or "unknown") appears within the latency window after a face is detected.
-3. **Registration flow** — 3–5 photo capture → embedding saved → user appears in list.
+3. **Guided registration flow** — fixed 6-photo guided capture completes in order → embedding saved → user appears in list.
 4. **Recognition flow** — registered user triggers login event, UI reflects match.
 5. **Debug metrics** — similarity score, FPS, and latency are all visible in the debug example app.
 
@@ -49,3 +49,10 @@ All interactive and display elements must have accessibility identifiers (iOS) o
 Tests are MCP-driven — run by Claude Code with AppReveal connected against a live simulator/emulator or real device. No separate test framework is needed; the MCP tools are the harness.
 
 Full click-through tests must pass on both platforms before any PR merge on the example apps.
+
+For guided registration, coverage must include:
+
+- pose order: `left_top` -> `top` -> `top_right` -> `bottom_right` -> `bottom_left` -> `straight`
+- active progress segment pulses before capture
+- completed segments fill after capture
+- low light blocks capture with the required copy

@@ -2,6 +2,10 @@ import UIKit
 import React
 import React_RCTAppDelegate
 
+#if DEBUG
+import AppReveal
+#endif
+
 @main
 class AppDelegate: RCTAppDelegate {
   override func application(
@@ -9,7 +13,7 @@ class AppDelegate: RCTAppDelegate {
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     #if DEBUG
-    RCTBundleURLProvider.sharedSettings().jsLocation = "192.168.1.229"
+    AppReveal.start()
     #endif
     self.moduleName = "FacesRegistration"
     self.initialProps = [:]

@@ -2,6 +2,11 @@
 
 ## Overview
 
+This doc describes the existing `Faces` identification product.
+
+Guided enrollment capture is being defined as a separate product family in the
+same repo. See [faces-capture-architecture.md](faces-capture-architecture.md).
+
 Three independently usable layers:
 
 ```
@@ -114,15 +119,20 @@ Photos are passed as base64 strings or `file://` URIs.
 
 ## Example Apps — `examples/`
 
-Three standalone React Native apps, all using `react-native-faces` via local path dependency.
+Three standalone React Native apps live under `examples/`.
+
+`examples/recognition` and `examples/debug` use `react-native-faces`.
+`examples/registration` is moving to a composed model that uses both
+`react-native-faces-capture` and `react-native-faces`.
 
 | App | Path | Purpose |
 |-----|------|---------|
-| Registration | `examples/registration` | Capture 3–5 photos, save worker |
+| Registration | `examples/registration` | Guided 6-photo capture with pose and lighting validation, save worker |
 | Recognition | `examples/recognition` | Live recognition, auto-login display |
 | Debug | `examples/debug` | Similarity scores, FPS, latency overlay |
 
 All embed AppReveal for E2E testing (debug builds only) — see [testing.md](testing.md).
+The registration app's guided capture UX is defined in [registration-guided-capture.md](registration-guided-capture.md), and the separate capture product boundary is defined in [faces-capture-architecture.md](faces-capture-architecture.md).
 
 ---
 
