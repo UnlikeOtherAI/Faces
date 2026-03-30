@@ -228,9 +228,6 @@ export default function RegistrationScreen({ onDone }: Props) {
             {FacesCaptureView
               ? <FacesCaptureView style={styles.previewFill} />
               : <View style={styles.previewFill} />}
-            <View style={styles.previewMask}>
-              <Text style={styles.previewHint}>{currentStep.short}</Text>
-            </View>
           </Animated.View>
         </View>
 
@@ -313,14 +310,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   previewFill: { width: '100%', height: '100%' },
-  previewMask: {
-    position: 'absolute',
-    inset: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(17,17,17,0.12)',
-  },
-  previewHint: { color: '#fff5e0', fontSize: 34, fontWeight: '800' },
   instruction: {
     fontSize: 20,
     fontWeight: '700',

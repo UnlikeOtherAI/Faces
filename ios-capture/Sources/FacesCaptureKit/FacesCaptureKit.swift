@@ -19,6 +19,7 @@ public final class FacesCaptureKit {
     private var latestState = CaptureState(targetPose: .leftTop)
     private var previousRect: FaceRect?
     private var latestBuffer: CVPixelBuffer?
+    private var captureReadyBuffer: CVPixelBuffer?
 
     private init() {
         camera.onFrame = { [weak self] buffer in
@@ -57,9 +58,10 @@ public final class FacesCaptureKit {
         guard latestState.canCapture, latestState.targetPose == targetPose else {
             throw FacesCaptureError.captureNotReady
         }
-        guard let buffer = latestBuffer else {
+        guard let buffer = captureReadyBuffer ?? latestBuffer else {
             throw FacesCaptureError.noFrameAvailable
         }
+        captureReadyBuffer = nil
         let image = CIImage(cvPixelBuffer: buffer).oriented(.right)
         guard let cgImage = ciContext.createCGImage(image, from: image.extent) else {
             throw FacesCaptureError.noFrameAvailable
@@ -84,6 +86,11 @@ public final class FacesCaptureKit {
             let analysis = analyzer.analyze(buffer: buffer, targetPose: currentTargetPose, previousRect: previousRect)
             previousRect = analysis.state.faceRect
             latestState = analysis.state
+            if analysis.state.canCapture {
+                captureReadyBuffer = buffer
+            } else {
+                captureReadyBuffer = nil
+            }
             let landmarks = analysis.landmarks
             DispatchQueue.main.async { [latestState, onCaptureState, onLandmarks] in
                 onCaptureState?(latestState)
