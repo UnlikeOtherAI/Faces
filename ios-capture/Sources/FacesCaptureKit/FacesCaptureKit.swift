@@ -20,6 +20,8 @@ public final class FacesCaptureKit {
     private var previousRect: FaceRect?
     private var latestBuffer: CVPixelBuffer?
     private var captureReadyBuffer: CVPixelBuffer?
+    private var captureStreak = 0
+    private let requiredStreak = 10  // ~0.33s at 30fps
 
     private init() {
         camera.onFrame = { [weak self] buffer in
@@ -37,6 +39,7 @@ public final class FacesCaptureKit {
     }
 
     public func setTargetPose(_ pose: CapturePose) {
+        captureStreak = 0
         currentTargetPose = pose
         latestState = CaptureState(
             targetPose: pose,
@@ -85,15 +88,40 @@ public final class FacesCaptureKit {
             guard let self else { return }
             let analysis = analyzer.analyze(buffer: buffer, targetPose: currentTargetPose, previousRect: previousRect)
             previousRect = analysis.state.faceRect
-            latestState = analysis.state
-            if analysis.state.canCapture {
-                captureReadyBuffer = buffer
+            let raw = analysis.state
+
+            let emittedState: CaptureState
+            if raw.canCapture {
+                captureStreak += 1
+                if captureStreak >= requiredStreak {
+                    emittedState = raw
+                    captureReadyBuffer = buffer
+                } else {
+                    emittedState = CaptureState(
+                        targetPose: raw.targetPose,
+                        detectedPose: raw.detectedPose,
+                        faceRect: raw.faceRect,
+                        faceInsideGuide: raw.faceInsideGuide,
+                        lightingOk: raw.lightingOk,
+                        sharpnessOk: raw.sharpnessOk,
+                        stable: raw.stable,
+                        canCapture: false,
+                        blockReason: .holdStill,
+                        yaw: raw.yaw,
+                        verticalRatio: raw.verticalRatio
+                    )
+                    captureReadyBuffer = buffer
+                }
             } else {
+                captureStreak = 0
                 captureReadyBuffer = nil
+                emittedState = raw
             }
+
+            latestState = emittedState
             let landmarks = analysis.landmarks
-            DispatchQueue.main.async { [latestState, onCaptureState, onLandmarks] in
-                onCaptureState?(latestState)
+            DispatchQueue.main.async { [emittedState, onCaptureState, onLandmarks] in
+                onCaptureState?(emittedState)
                 onLandmarks?(landmarks)
             }
         }

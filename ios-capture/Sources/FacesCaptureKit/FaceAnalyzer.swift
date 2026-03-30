@@ -84,6 +84,18 @@ final class FaceAnalyzer {
         let verticalRatio: Double
     }
 
+    // Arc center angles must match the JS ARC_CENTERS exactly.
+    private static let poseAngles: [(CapturePose, Double)] = [
+        (.leftTop, 198),
+        (.top, 270),
+        (.topRight, 342),
+        (.bottomRight, 54),
+        (.bottomLeft, 126),
+    ]
+    private static let neutralVR = 0.355
+    private static let angleTolerance = 28.0  // half the arc span (56°/2)
+    private static let minMagnitude   = 0.3   // must look away from center this much
+
     private func detectPose(_ face: VNFaceObservation) -> PoseResult {
         let yaw = face.yaw?.doubleValue ?? 0
         let landmarks = face.landmarks
@@ -91,50 +103,42 @@ final class FaceAnalyzer {
         guard
             let leftEye = averagePoint(landmarks?.leftEye),
             let rightEye = averagePoint(landmarks?.rightEye),
-            let nose = averagePoint(landmarks?.nose),
             let outerLips = averagePoint(landmarks?.outerLips)
         else {
-            let fallback: CapturePose
-            if yaw < -0.18 { fallback = .topRight }
-            else if yaw > 0.18 { fallback = .leftTop }
-            else { fallback = .straight }
-            return PoseResult(pose: fallback, yaw: yaw, verticalRatio: 0)
+            return PoseResult(pose: .straight, yaw: yaw, verticalRatio: Self.neutralVR)
         }
 
-        let eyesMidX = (leftEye.x + rightEye.x) / 2
         let eyeY = (leftEye.y + rightEye.y) / 2
         let mouthY = outerLips.y
-        let horizontal = nose.x - eyesMidX
-        let verticalRatio = (mouthY - eyeY)
+        let verticalRatio = mouthY - eyeY
 
-        let vertical: Int
-        if verticalRatio < 0.33 {
-            vertical = 1
-        } else if verticalRatio > 0.38 {
-            vertical = -1
-        } else {
-            vertical = 0
+        let dx = -yaw
+        let dy = verticalRatio - Self.neutralVR
+        let hMag = Swift.abs(yaw) / 0.4
+        let vMag = Swift.abs(verticalRatio - Self.neutralVR) / 0.1
+        let magnitude = Swift.min(Swift.max(hMag, vMag), 1.0)
+
+        guard magnitude >= Self.minMagnitude else {
+            return PoseResult(pose: .straight, yaw: yaw, verticalRatio: verticalRatio)
         }
 
-        let horizontalBucket: Int
-        if horizontal < -0.02 || yaw > 0.12 {
-            horizontalBucket = -1
-        } else if horizontal > 0.02 || yaw < -0.12 {
-            horizontalBucket = 1
-        } else {
-            horizontalBucket = 0
+        let angle = (atan2(dy, dx) * 180.0 / .pi + 360.0)
+            .truncatingRemainder(dividingBy: 360.0)
+
+        var bestPose: CapturePose = .straight
+        var bestDist = Self.angleTolerance
+
+        for (pose, center) in Self.poseAngles {
+            let raw = Swift.abs(angle - center)
+                .truncatingRemainder(dividingBy: 360.0)
+            let dist = Swift.min(raw, 360.0 - raw)
+            if dist < bestDist {
+                bestDist = dist
+                bestPose = pose
+            }
         }
 
-        let pose: CapturePose
-        switch (horizontalBucket, vertical) {
-        case (-1, 1): pose = .leftTop
-        case (1, 1): pose = .topRight
-        case (1, -1): pose = .bottomRight
-        case (-1, -1): pose = .bottomLeft
-        case (0, 1): pose = .top
-        default: pose = .straight
-        }
-        return PoseResult(pose: pose, yaw: yaw, verticalRatio: verticalRatio)
+        return PoseResult(pose: bestPose, yaw: yaw, verticalRatio: verticalRatio)
     }
 
     private func averagePoint(_ region: VNFaceLandmarkRegion2D?) -> CGPoint? {
