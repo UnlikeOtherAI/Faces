@@ -39,6 +39,7 @@ Each layer can be used standalone. The native libraries have no React Native dep
 FacesKit.shared.start()
 FacesKit.shared.stop()
 FacesKit.shared.register(workerId:name:photos:completion:)
+FacesKit.shared.embeddings(from:completion:)   // → [[Float]], one vector per photo, no store write
 FacesKit.shared.delete(workerId:)
 FacesKit.shared.workers() -> [Worker]
 FacesKit.shared.onMatch = { match in ... }  // MatchResult

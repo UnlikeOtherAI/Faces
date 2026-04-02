@@ -63,6 +63,27 @@ public final class FacesKit: NSObject {
         }
     }
 
+    /// Processes `photos` and returns one L2-normalised embedding vector per photo
+    /// in which a face was detected. Photos where no face is found are silently skipped.
+    /// The result contains the vectors only — nothing is written to the store.
+    public func embeddings(from photos: [CGImage],
+                           completion: @escaping (Result<[[Float]], Error>) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+            var vectors: [[Float]] = []
+            for photo in photos {
+                guard let crop = try? self.detector.detectAndCrop(image: photo) else { continue }
+                guard var emb = try? self.embedder.embed(image: crop) else { continue }
+                l2Normalize(&emb)
+                vectors.append(emb)
+            }
+            guard !vectors.isEmpty else {
+                DispatchQueue.main.async { completion(.failure(FacesKitError.noFaceDetected)) }
+                return
+            }
+            DispatchQueue.main.async { completion(.success(vectors)) }
+        }
+    }
+
     public func delete(workerId: String) throws {
         if let worker = store.all().first(where: { $0.id == workerId }),
            let path = worker.photoPath {

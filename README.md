@@ -37,6 +37,9 @@ The model is **not included**. Everyone trains their own from a dataset of their
 Register user (6 guided photos)
     → detect face → extract 128-dim embedding → store on device
 
+Extract embeddings only (no store write)
+    → detect face per photo → extract embedding → return [[Float]] for external DB storage
+
 Live camera frame (every 3rd frame)
     → detect face → extract embedding → cosine similarity vs. stored embeddings
     → if score > 0.70 → emit login event
