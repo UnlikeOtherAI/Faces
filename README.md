@@ -22,6 +22,7 @@ Identifies users by face in under 300ms. Runs entirely on-device — no cloud.
 ios/        Swift Package — FacesKit (Vision, CoreML, AVFoundation)
 android/    Gradle library — faceskit AAR (CameraX, ML Kit, TFLite)
 react/      React Native module — react-native-faces (TurboModules)
+web/        Browser package — @unlikeotherai/faces (Worker + WASM boundary)
 examples/   Three standalone RN apps (registration, recognition, debug)
 model/      Training pipeline — train your own CoreML + TFLite model
 docs/       Architecture, testing, training guide
@@ -95,6 +96,30 @@ import FaceID from 'react-native-faces'
 FaceID.startRecognition()
 FaceID.onFaceRecognized((match) => login(match.workerId))
 ```
+
+### Web
+
+```bash
+pnpm add @unlikeotherai/faces
+```
+
+```typescript
+import {
+  createFacesRecognitionWorker,
+  createFacesWebRecognition,
+  createRecognitionWorkerClient,
+} from '@unlikeotherai/faces'
+
+const workerClient = createRecognitionWorkerClient(createFacesRecognitionWorker())
+await workerClient.initialize({
+  moduleUrl: new URL('./modelEmbedder.js', import.meta.url).href,
+  expectedEmbeddingDimensions: 128,
+})
+const recognition = createFacesWebRecognition({ workerClient })
+recognition.onFaceRecognized((match) => selectWorker(match.workerId))
+```
+
+See `docs/web-wasm-recognition.md` for the browser Worker/WASM architecture.
 
 ---
 

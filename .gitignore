@@ -21,6 +21,8 @@ build/
 dist/
 out/
 *.tsbuildinfo
+**/ios/build-*/
+/arc-preview.png
 
 # iOS
 **/Pods/

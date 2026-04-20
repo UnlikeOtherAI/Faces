@@ -7,7 +7,7 @@ This doc describes the existing `Faces` identification product.
 Guided enrollment capture is being defined as a separate product family in the
 same repo. See [faces-capture-architecture.md](faces-capture-architecture.md).
 
-Three independently usable layers:
+Four independently usable layers:
 
 ```
 React Native App
@@ -15,6 +15,10 @@ React Native App
 react/react-native-faces   ← RN native module
       │                    │
 ios/FacesKit (Swift PM)   android/faceskit (Gradle AAR)
+
+Browser App
+      │
+web/faces-web-recognition  ← @unlikeotherai/faces Worker + WASM recognition boundary
 ```
 
 Each layer can be used standalone. The native libraries have no React Native dependency.
@@ -115,6 +119,37 @@ Photos are passed as base64 strings or `file://` URIs.
 - `ios/RNFaces.swift` + `ios/RNFaces.m` (ObjC bridge header)
 - `android/src/main/java/ai/unlikeother/rnfaces/RNFacesModule.kt`
 - `android/src/main/java/ai/unlikeother/rnfaces/RNFacesPackage.kt`
+
+---
+
+## Layer 4: Web — `web/faces-web-recognition`
+
+**Package name:** `@unlikeotherai/faces`
+
+**Architecture:** framework-agnostic TypeScript package with a Web Worker client
+and model-agnostic Worker protocol.
+
+**Responsibilities:**
+- enrolled worker embedding records
+- L2 normalization and average embedding calculation
+- cosine similarity matching
+- frame throttling and in-flight frame dropping
+- Worker message protocol for browser model embedders
+
+**JS API:**
+```ts
+createFacesWebRecognition({ workerClient })
+recognition.startRecognition(frameSource)
+recognition.stopRecognition()
+recognition.registerWorkerEmbeddings(worker)
+recognition.replaceWorkerEmbeddings(workers)
+recognition.recognizeFrame(frame)
+recognition.onFaceRecognized(callback)
+recognition.onRecognitionError(callback)
+```
+
+The web layer does not own camera permission UX, embedding persistence, or POS
+business actions. See [web-wasm-recognition.md](web-wasm-recognition.md).
 
 ---
 
