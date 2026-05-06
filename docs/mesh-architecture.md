@@ -13,6 +13,7 @@ Provide a browser demo that uses webcam face landmarks to drive a directional ra
 - Straight-ahead gaze hides the directional pointer
 - Guided capture targets 1-5 around the face area, followed by target 6 at the nose/straight-ahead position
 - Captured frames render as local browser thumbnails inside the same capture card
+- Each accepted frame dispatches a `faces:capture-photo` browser event with the capture direction
 
 ## Runtime Flow
 
@@ -33,6 +34,8 @@ Provide a browser demo that uses webcam face landmarks to drive a directional ra
 - Use a static redirect from the root page to keep setup simple.
 - Keep the directional pointer hidden while the user looks straight at the camera.
 - Keep capture thumbnails in page memory only; no files are written by the browser demo.
+- Use the direction enum values `left_top`, `top`, `top_right`,
+  `bottom_right`, `bottom_left`, and `straight` for capture events.
 
 ## Constraints
 

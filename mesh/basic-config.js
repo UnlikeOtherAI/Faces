@@ -5,6 +5,15 @@ const STRAIGHT_GAZE_PITCH_OFFSET = 0.1049;
 const TARGET_MIN_MAGNITUDE = 0.34;
 const TARGET_DOT_THRESHOLD = 0.78;
 const TARGET_HOLD_MS = 1000;
+const PHOTO_CAPTURED_EVENT = "faces:capture-photo";
+const CaptureDirection = Object.freeze({
+  TopLeft: "left_top",
+  Top: "top",
+  TopRight: "top_right",
+  BottomRight: "bottom_right",
+  BottomLeft: "bottom_left",
+  Straight: "straight",
+});
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -19,12 +28,12 @@ const normalize = ({ x, y }) => {
 };
 
 const captureTargets = [
-  { id: 1, name: "top left", vector: normalize({ x: -1, y: -1 }) },
-  { id: 2, name: "up", vector: normalize({ x: 0, y: -1 }) },
-  { id: 3, name: "top right", vector: normalize({ x: 1, y: -1 }) },
-  { id: 4, name: "bottom right", vector: normalize({ x: 1, y: 1 }) },
-  { id: 5, name: "bottom left", vector: normalize({ x: -1, y: 1 }) },
-  { id: 6, name: "look straight", vector: null },
+  { id: 1, direction: CaptureDirection.TopLeft, name: "top left", vector: normalize({ x: -1, y: -1 }) },
+  { id: 2, direction: CaptureDirection.Top, name: "up", vector: normalize({ x: 0, y: -1 }) },
+  { id: 3, direction: CaptureDirection.TopRight, name: "top right", vector: normalize({ x: 1, y: -1 }) },
+  { id: 4, direction: CaptureDirection.BottomRight, name: "bottom right", vector: normalize({ x: 1, y: 1 }) },
+  { id: 5, direction: CaptureDirection.BottomLeft, name: "bottom left", vector: normalize({ x: -1, y: 1 }) },
+  { id: 6, direction: CaptureDirection.Straight, name: "look straight", vector: null },
 ];
 
 const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)

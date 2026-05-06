@@ -17,6 +17,9 @@ export function EnrollmentCapture() {
     <GuidedFaceCaptureCard
       debug
       holdMs={1000}
+      onPhotoCaptured={(event) => {
+        console.log(event.direction, event.stepNumber, event.uri);
+      }}
       onCaptureState={(state: CaptureState) => {
         console.log(state.targetPose, state.canCapture);
       }}
@@ -33,3 +36,12 @@ export function EnrollmentCapture() {
 
 The component does not register workers or create embeddings. Pass the completed
 photo URIs to `react-native-faces` or another enrollment backend.
+
+`onPhotoCaptured` fires once per accepted photo. Its `direction` value is one of:
+
+- `left_top`
+- `top`
+- `top_right`
+- `bottom_right`
+- `bottom_left`
+- `straight`

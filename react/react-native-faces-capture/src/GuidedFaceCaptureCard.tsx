@@ -12,11 +12,32 @@ import {
 import FacesCapture, { FacesCaptureView } from './FacesCaptureBridge';
 import type { CapturePose, CaptureState } from './NativeFacesCapture';
 
+export const GuidedCaptureDirection = {
+  TopLeft: 'left_top',
+  Top: 'top',
+  TopRight: 'top_right',
+  BottomRight: 'bottom_right',
+  BottomLeft: 'bottom_left',
+  Straight: 'straight',
+} as const;
+
+export type GuidedCaptureDirection =
+  (typeof GuidedCaptureDirection)[keyof typeof GuidedCaptureDirection];
+
 export interface GuidedCaptureStep {
-  pose: CapturePose;
+  pose: GuidedCaptureDirection;
   label: string;
   shortLabel: string;
   target: { left: `${number}%`; top: `${number}%` };
+}
+
+export interface GuidedPhotoCapturedEvent {
+  direction: GuidedCaptureDirection;
+  pose: CapturePose;
+  stepIndex: number;
+  stepNumber: number;
+  uri: string;
+  photos: string[];
 }
 
 export interface GuidedFaceCaptureCardProps {
@@ -29,6 +50,7 @@ export interface GuidedFaceCaptureCardProps {
   onCaptureState?: (state: CaptureState) => void;
   onComplete?: (photos: string[]) => void;
   onError?: (error: Error) => void;
+  onPhotoCaptured?: (event: GuidedPhotoCapturedEvent) => void;
   onPhotosChange?: (photos: string[]) => void;
 }
 
@@ -36,12 +58,12 @@ const DEFAULT_HOLD_MS = 1000;
 const EMPTY_PHOTOS: string[] = [];
 
 export const GUIDED_CAPTURE_STEPS: readonly GuidedCaptureStep[] = [
-  { pose: 'left_top', label: 'Look top left', shortLabel: '1', target: { left: '18%', top: '18%' } },
-  { pose: 'top', label: 'Look up', shortLabel: '2', target: { left: '50%', top: '10%' } },
-  { pose: 'top_right', label: 'Look top right', shortLabel: '3', target: { left: '82%', top: '18%' } },
-  { pose: 'bottom_right', label: 'Look bottom right', shortLabel: '4', target: { left: '82%', top: '82%' } },
-  { pose: 'bottom_left', label: 'Look bottom left', shortLabel: '5', target: { left: '18%', top: '82%' } },
-  { pose: 'straight', label: 'Look straight', shortLabel: '6', target: { left: '50%', top: '50%' } },
+  { pose: GuidedCaptureDirection.TopLeft, label: 'Look top left', shortLabel: '1', target: { left: '18%', top: '18%' } },
+  { pose: GuidedCaptureDirection.Top, label: 'Look up', shortLabel: '2', target: { left: '50%', top: '10%' } },
+  { pose: GuidedCaptureDirection.TopRight, label: 'Look top right', shortLabel: '3', target: { left: '82%', top: '18%' } },
+  { pose: GuidedCaptureDirection.BottomRight, label: 'Look bottom right', shortLabel: '4', target: { left: '82%', top: '82%' } },
+  { pose: GuidedCaptureDirection.BottomLeft, label: 'Look bottom left', shortLabel: '5', target: { left: '18%', top: '82%' } },
+  { pose: GuidedCaptureDirection.Straight, label: 'Look straight', shortLabel: '6', target: { left: '50%', top: '50%' } },
 ];
 
 export function GuidedFaceCaptureCard({
@@ -54,6 +76,7 @@ export function GuidedFaceCaptureCard({
   onCaptureState,
   onComplete,
   onError,
+  onPhotoCaptured,
   onPhotosChange,
 }: GuidedFaceCaptureCardProps) {
   const [photos, setPhotos] = useState<string[]>(initialPhotos);
@@ -142,11 +165,21 @@ export function GuidedFaceCaptureCard({
     if (capturing.current || complete) return;
     capturing.current = true;
     try {
-      const uri = await FacesCapture.capturePhoto(activeStep.pose);
+      const step = activeStep;
+      const stepIndex = activeIndex;
+      const uri = await FacesCapture.capturePhoto(step.pose);
       const nextPhotos = [...photos, uri];
       setPhotos(nextPhotos);
+      onPhotoCaptured?.({
+        direction: step.pose,
+        pose: step.pose,
+        stepIndex,
+        stepNumber: stepIndex + 1,
+        uri,
+        photos: nextPhotos,
+      });
       onPhotosChange?.(nextPhotos);
-      setStatus(nextPhotos.length >= GUIDED_CAPTURE_STEPS.length ? 'Capture sequence complete.' : `Captured ${activeStep.shortLabel}.`);
+      setStatus(nextPhotos.length >= GUIDED_CAPTURE_STEPS.length ? 'Capture sequence complete.' : `Captured ${step.shortLabel}.`);
       if (nextPhotos.length >= GUIDED_CAPTURE_STEPS.length) onComplete?.(nextPhotos);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));

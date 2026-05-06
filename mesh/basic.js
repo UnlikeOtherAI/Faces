@@ -285,12 +285,27 @@ function createCameraSnapshot() {
 }
 
 function captureActiveTarget(target) {
-  state.captures.push({ id: target.id, name: target.name, src: createCameraSnapshot() });
+  const src = createCameraSnapshot();
+  const capture = { id: target.id, direction: target.direction, name: target.name, src };
+  state.captures.push(capture);
   state.activeTargetIndex += 1;
   state.targetHoldStartedAt = 0;
   renderCaptures();
+  dispatchPhotoCapturedEvent(capture);
   const nextTarget = getActiveTarget();
   statusLabel.textContent = nextTarget ? `Captured ${target.id}.` : "Capture sequence complete.";
+}
+
+function dispatchPhotoCapturedEvent(capture) {
+  window.dispatchEvent(new CustomEvent(PHOTO_CAPTURED_EVENT, {
+    detail: {
+      direction: capture.direction, photoDataUrl: capture.src,
+      targetId: capture.id,
+      targetName: capture.name,
+      captureIndex: state.captures.length - 1,
+      totalCaptures: state.captures.length,
+    },
+  }));
 }
 
 function targetMatchesGaze(target) {
@@ -337,7 +352,7 @@ faceMesh.onResults((results) => {
     state.smoothYaw = lerp(state.smoothYaw, 0, 0.12);
     state.smoothPitch = lerp(state.smoothPitch, 0, 0.12);
     state.latestNosePoint = null;
-    state.targetHoldFrames = 0;
+    state.targetHoldStartedAt = 0;
     drawScene(state.smoothYaw, state.smoothPitch, false, null);
     updateDebugLabel();
     statusLabel.textContent = "Face not detected.";
@@ -472,4 +487,14 @@ startButton.addEventListener("click", start);
 centerButton.addEventListener("click", setStraight);
 copyDebugButton.addEventListener("click", copyDebugValues);
 window.addEventListener("resize", () => drawScene(state.smoothYaw, state.smoothPitch, state.hasFace, null));
-window.facesBasicDebug = { state, captureTargets, drawScene, captureActiveTarget, targetMatchesGaze, updateCaptureSequence, updateDebugLabel };
+window.facesBasicDebug = {
+  state,
+  captureTargets,
+  CaptureDirection,
+  PHOTO_CAPTURED_EVENT,
+  drawScene,
+  captureActiveTarget,
+  targetMatchesGaze,
+  updateCaptureSequence,
+  updateDebugLabel,
+};
