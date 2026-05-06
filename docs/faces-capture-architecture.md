@@ -179,6 +179,22 @@ The module must not expose:
 - embedding APIs
 - match APIs
 
+## React Native Component
+
+The package also exposes a standalone `GuidedFaceCaptureCard` component.
+
+Responsibilities:
+
+- start and stop the guided capture session
+- advance through the six fixed poses
+- show one active target at a time
+- hold a valid pose before capturing
+- display the accepted photo thumbnails inside the same preview card
+- emit completed photo URIs through `onComplete`
+
+The component must remain a capture-only surface. It may call the capture bridge,
+but it must not import `react-native-faces` or register workers directly.
+
 ## Example App Composition
 
 `examples/registration` should become a consumer of two packages:

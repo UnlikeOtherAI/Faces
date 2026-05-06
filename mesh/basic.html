@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mesh Face Wave</title>
+    <link rel="stylesheet" href="./basic.css" />
+  </head>
+  <body>
+    <main>
+      <section class="face-capture-card" aria-label="Guided face capture">
+        <canvas id="meshCanvas" width="640" height="640"></canvas>
+        <div class="captures" id="captureStrip" aria-live="polite"></div>
+      </section>
+      <div class="controls">
+        <button id="startButton" type="button">Start Webcam</button>
+        <button id="centerButton" type="button" disabled>Set Straight</button>
+        <span class="status" id="statusLabel">Waiting to start.</span>
+      </div>
+      <section class="debug-panel" aria-label="Debug values">
+        <button class="debug-copy" id="copyDebugButton" type="button">Copy Debug Values</button>
+        <pre class="debug" id="debugLabel">debug: waiting for webcam</pre>
+      </section>
+      <video id="inputVideo" autoplay playsinline muted></video>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="./basic-config.js"></script>
+    <script src="./basic.js"></script>
+  </body>
+</html>

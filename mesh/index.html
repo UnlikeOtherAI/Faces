@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mesh Face Wave</title>
+    <meta http-equiv="refresh" content="0; url=./basic.html" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fa;
+        --ink: #172033;
+        --muted: #5d687a;
+        --accent: #39ff14;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(92vw, 560px);
+        padding: 2.1rem;
+        border: 1px solid #d9dee7;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow:
+          0 1px 0 #ffffff inset,
+          0 18px 38px rgba(29, 41, 57, 0.12);
+      }
+
+      h1 {
+        margin: 0 0 0.45rem;
+        font-size: clamp(1.4rem, 3.5vw, 2rem);
+        letter-spacing: 0.02em;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.96rem;
+        color: var(--muted);
+      }
+
+      .actions {
+        margin-top: 1.35rem;
+        display: grid;
+        gap: 0.82rem;
+      }
+
+      .mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.58rem;
+        text-decoration: none;
+        color: #0a1f05;
+        background: var(--accent);
+        border-radius: 999px;
+        padding: 0.78rem 1rem 0.78rem 0.95rem;
+        font-size: 0.98rem;
+        font-weight: 700;
+      }
+
+      .play {
+        display: grid;
+        place-items: center;
+        width: 1.6rem;
+        height: 1.6rem;
+        border-radius: 999px;
+        background: rgba(6, 16, 31, 0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Mesh Face Tracker</h1>
+      <p>Opening the Basic tracker.</p>
+      <div class="actions">
+        <a class="mode" href="./basic.html">
+          <i class="play">▶</i> Open Basic
+        </a>
+      </div>
+    </main>
+    <script>
+      window.location.replace("./basic.html");
+    </script>
+  </body>
+</html>
