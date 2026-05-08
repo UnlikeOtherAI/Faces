@@ -1,0 +1,38 @@
+name: FacesMesh
+
+options:
+  minimumXcodeVersion: "15.0"
+  deploymentTarget:
+    iOS: "16.0"
+
+targets:
+  FacesMesh:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: FacesMesh
+        excludes:
+          - "web/**"
+      - path: FacesMesh/web
+        type: folder
+        buildPhase: resources
+    preBuildScripts:
+      - name: "Bundle React Native code and images"
+        script: |
+          set -e
+          export NODE_BINARY=$(command -v node)
+          RN_DIR="$SRCROOT/../node_modules/react-native"
+          export HERMES_CLI_PATH="$SRCROOT/Pods/hermes-engine/destroot/bin/hermesc"
+          /bin/sh -c "$RN_DIR/scripts/xcode/with-environment.sh $RN_DIR/scripts/react-native-xcode.sh"
+        basedOnDependencyAnalysis: false
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        INFOPLIST_FILE: FacesMesh/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: ai.unlikeother.facesmesh
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: "59S95D279D"
+        ENABLE_BITCODE: "NO"
+        CLANG_ENABLE_MODULES: "YES"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
