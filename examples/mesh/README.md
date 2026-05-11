@@ -1,6 +1,6 @@
 # Faces Mesh Example
 
-iOS-only React Native example that ports `mesh/basic.html` (MediaPipe FaceMesh + gaze-driven 6-pose capture) into a `WKWebView` and exposes the result as a reusable React component, `<MeshCaptureCard />`.
+React Native example that ports `mesh/basic.html` (MediaPipe FaceMesh + gaze-driven 6-pose capture) into a WebView and exposes the result as a reusable React component, `<MeshCaptureCard />`. Runs on iOS and Android.
 
 ## What you get
 
@@ -69,46 +69,63 @@ type MeshCompletePayload = {
 
 ## Why `meshHtml` is a prop
 
-`getUserMedia` in `WKWebView` requires a secure context. We can't load `file://`. The native side reads the four web assets at app start, inlines them into one HTML document, and hands the string to JS via `initialProps`. The component then mounts the WebView with `baseUrl: 'https://faces.local/'`, which `WKWebView` treats as secure.
+`getUserMedia` in a WebView requires a secure context. We can't load `file://`. The native side reads the web assets at app start, inlines them into one HTML document, and hands the string to JS via `initialProps`. The component mounts the WebView with `baseUrl: 'https://faces.local/'`, which both `WKWebView` and Android `WebView` treat as secure.
 
-If you embed this component in your own app:
+### Embedding in your own iOS app
 
-1. Bundle the four files in `ios/<App>/web/` (`basic.html`, `basic.css`, `basic.js`, `basic-config.js` — copied from `/mesh/` at the repo root).
-2. In `AppDelegate.swift`, do what `examples/mesh/ios/FacesMesh/AppDelegate.swift` does: read each file, inject into a single HTML template, set as `initialProps["meshHtml"]`.
+1. Bundle the web assets in `ios/<App>/web/` (copy `basic.css`, `basic.js`, `basic-config.js` from `/mesh/`).
+2. In `AppDelegate.swift`, read each file, inline into an HTML template, and set `initialProps["meshHtml"]`.
 3. In `Info.plist`: add `NSCameraUsageDescription` and set `UIViewControllerBasedStatusBarAppearance` to `NO`.
-4. Pass the prop into your screen and feed it to `<MeshCaptureCard meshHtml={meshHtml} />`.
+4. Pass the prop: `<MeshCaptureCard meshHtml={meshHtml} />`.
+
+### Embedding in your own Android app
+
+1. Place the web assets in `app/src/main/assets/web/` (copy `basic.css`, `basic.js`, `basic-config.js` from `/mesh/`).
+2. In `MainActivity.kt`, override `getLaunchOptions()` to return a `Bundle` with `meshHtml` built from those assets.
+3. In `AndroidManifest.xml`: add `CAMERA` permission and `<uses-feature android:name="android.hardware.camera" />`.
+4. Pass the prop: `<MeshCaptureCard meshHtml={meshHtml} />`.
 
 ## Build & run
 
 ```bash
 cd examples/mesh
 pnpm install
-cd ios && pod install && cd ..
 pnpm start --reset-cache         # Metro on :8081
 ```
 
-Then build and install on a real device (the simulator has no camera):
+### iOS
 
 ```bash
+cd ios && pod install && cd ..
 xcodebuild -workspace ios/FacesMesh.xcworkspace -scheme FacesMesh \
   -configuration Debug -destination "id=<UDID>" \
   -derivedDataPath ios/build CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM=<TEAM>
 xcrun devicectl device install app --device <UDID> \
-  /tmp/gpteen-xcode2/Prod/Debug-iphoneos/FacesMesh.app
+  ios/build/Build/Products/Debug-iphoneos/FacesMesh.app
 xcrun devicectl device process launch --device <UDID> \
   --terminate-existing ai.unlikeother.facesmesh
 ```
 
-The app auto-starts the camera, asks for permission once, then walks the user through the six poses.
+### Android
+
+```bash
+cd android && ./gradlew installDebug
+adb shell am start -n ai.unlikeother.facesmesh/.MainActivity
+```
+
+Both platforms auto-start the camera, ask for permission once, then walk the user through the six poses.
 
 ## Files of interest
 
-| Path                                    | What                                                |
-|-----------------------------------------|-----------------------------------------------------|
-| `App.tsx`                               | Wires the event handlers, renders the card.        |
-| `components/MeshCaptureCard.tsx`        | Reusable component. WebView + event parser.        |
-| `ios/FacesMesh/AppDelegate.swift`       | Loads `web/*` and inlines into `meshHtml`.         |
-| `ios/FacesMesh/web/`                    | Verbatim copy of `/mesh/` (only place this lives). |
-| `ios/FacesMesh/Info.plist`              | Camera usage string + status-bar appearance flag.  |
+| Path                                                        | What                                                       |
+|-------------------------------------------------------------|------------------------------------------------------------|
+| `App.tsx`                                                   | Wires the event handlers, renders the card.               |
+| `components/MeshCaptureCard.tsx`                            | Reusable component. WebView + event parser.               |
+| `ios/FacesMesh/AppDelegate.swift`                           | Loads `web/*` and inlines into `meshHtml`.                |
+| `ios/FacesMesh/web/`                                        | Web assets for the iOS app (copied from `/mesh/`).        |
+| `ios/FacesMesh/Info.plist`                                  | Camera usage string + status-bar appearance flag.         |
+| `android/app/src/main/java/…/MainActivity.kt`               | Loads `assets/web/*` and passes `meshHtml` as props.      |
+| `android/app/src/main/assets/web/`                          | Web assets for the Android app (copied from `/mesh/`).    |
+| `android/app/src/main/AndroidManifest.xml`                  | Camera permission declaration.                            |
 
 See [`docs/mesh-rn-example-architecture.md`](../../docs/mesh-rn-example-architecture.md) for the full architecture write-up.

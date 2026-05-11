@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { WebView, type WebViewMessageEvent, type PermissionRequest } from 'react-native-webview';
 
 export type MeshCapture = {
   id: number;
@@ -62,6 +62,10 @@ export function MeshCaptureCard({ meshHtml, onCapture, onComplete, onReady, onEr
     }
   }, [onCapture, onComplete, onReady, onError, onLog]);
 
+  const handlePermissionRequest = useCallback((request: PermissionRequest) => {
+    request.grant(request.resources);
+  }, []);
+
   return (
     <View style={styles.root}>
       <WebView
@@ -76,6 +80,7 @@ export function MeshCaptureCard({ meshHtml, onCapture, onComplete, onReady, onEr
         bounces={false}
         injectedJavaScriptBeforeContentLoaded={errorBridge}
         onMessage={handleMessage}
+        onPermissionRequest={handlePermissionRequest}
       />
     </View>
   );

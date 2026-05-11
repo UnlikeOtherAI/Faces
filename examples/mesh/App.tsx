@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Platform, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { MeshCaptureCard, type MeshCapture, type MeshCompletePayload } from './components/MeshCaptureCard';
 
 type Props = { meshHtml?: string };
@@ -9,11 +9,11 @@ export default function App({ meshHtml }: Props) {
   const [progress, setProgress] = useState<{ index: number; total: number } | null>(null);
   const [done, setDone] = useState(false);
 
-  if (Platform.OS !== 'ios' || !meshHtml) {
+  if (!meshHtml) {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.fallback}>
-          <Text style={styles.fallbackText}>iOS only example.</Text>
+          <Text style={styles.fallbackText}>No mesh HTML provided.</Text>
         </View>
       </SafeAreaView>
     );
