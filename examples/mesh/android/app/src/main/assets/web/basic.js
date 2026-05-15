@@ -72,7 +72,7 @@ function drawSegmentedRing(progress, cx, cy) {
   ctx.lineCap = "round";
   ctx.lineWidth = 5;
   for (let i = 0; i < RING_SEGMENTS; i += 1) {
-    const angle = -Math.PI / 2 + (i / RING_SEGMENTS) * Math.PI * 2;
+    const angle = -Math.PI / 2 - (i / RING_SEGMENTS) * Math.PI * 2;
     const start = {
       x: cx + Math.cos(angle) * RING_INNER_RADIUS,
       y: cy + Math.sin(angle) * RING_INNER_RADIUS,
