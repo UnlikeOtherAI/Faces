@@ -2,10 +2,16 @@ const canvas = document.getElementById("meshCanvas");
 const ctx = canvas.getContext("2d");
 const video = document.getElementById("inputVideo");
 const centerButton = document.getElementById("centerButton");
-const copyDebugButton = document.getElementById("copyDebugButton");
+const primaryButton = document.getElementById("primaryButton");
 const statusLabel = document.getElementById("statusLabel");
-const debugLabel = document.getElementById("debugLabel");
+const progressLabel = document.getElementById("progressLabel");
 const captureStrip = document.getElementById("captureStrip");
+
+const VIDEO_RADIUS = 282;
+const RING_GAP = 10;
+const RING_INNER_RADIUS = VIDEO_RADIUS + RING_GAP;
+const RING_OUTER_RADIUS = 314;
+const RING_SEGMENTS = 72;
 
 function postBridge(type, payload) {
   if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === "function") {
@@ -22,13 +28,14 @@ const state = {
   neutralYaw: 0,
   neutralPitch: 0,
   calibrationFrames: 0,
+  mode: "intro",
   latestRawYaw: 0,
   latestRawPitch: 0,
   latestYaw: 0,
   latestPitch: 0,
-  latestNosePoint: null,
   activeTargetIndex: 0,
   targetHoldStartedAt: 0,
+  doneImage: null,
   captures: [],
 };
 
@@ -40,162 +47,77 @@ function getActiveTarget() {
   return captureTargets[state.activeTargetIndex] || null;
 }
 
-function updateDebugLabel() {
-  debugLabel.textContent = getDebugText();
+function setUiMode(mode) {
+  state.mode = mode;
+  document.body.dataset.mode = mode;
+  if (primaryButton) primaryButton.textContent = mode === "done" ? "Continue" : "Get Started";
 }
 
-function getDebugText() {
+function getCaptureProgress() {
   const target = getActiveTarget();
-  const magnitude = Math.hypot(state.latestYaw, state.latestPitch);
-  const holdMs = state.targetHoldStartedAt ? performance.now() - state.targetHoldStartedAt : 0;
-  const rows = [
-    ["target", target ? `${target.id} ${target.name}` : "complete"],
-    ["rawYaw", state.latestRawYaw],
-    ["neutralYaw", state.neutralYaw],
-    ["yawDelta", state.latestRawYaw - state.neutralYaw],
-    ["outputYaw", state.latestYaw],
-    ["yawOffset", STRAIGHT_GAZE_YAW_OFFSET],
-    ["rawPitch", state.latestRawPitch],
-    ["neutralPitch", state.neutralPitch],
-    ["pitchDelta", state.latestRawPitch - state.neutralPitch],
-    ["outputPitch", state.latestPitch],
-    ["pitchOffset", STRAIGHT_GAZE_PITCH_OFFSET],
-    ["magnitude", magnitude],
-    ["holdMs", holdMs],
-  ];
-
-  return rows.map(([label, value]) => {
-    const formatted = typeof value === "number" ? formatDebugValue(value) : value;
-    return `${label.padEnd(12)}${formatted}`;
-  }).join("\n");
+  const hold = state.targetHoldStartedAt
+    ? clamp((performance.now() - state.targetHoldStartedAt) / TARGET_HOLD_MS, 0, 1)
+    : 0;
+  return target ? (state.captures.length + hold) / captureTargets.length : 1;
 }
 
-async function copyDebugValues() {
-  const text = getDebugText();
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.setAttribute("readonly", "");
-    textArea.style.position = "fixed";
-    textArea.style.opacity = "0";
-    document.body.append(textArea);
-    textArea.select();
-    document.execCommand("copy");
-    textArea.remove();
-  }
-  copyDebugButton.textContent = "Copied";
-  window.setTimeout(() => {
-    copyDebugButton.textContent = "Copy Debug Values";
-  }, 1200);
+function updateProgressLabel() {
+  if (!progressLabel) return;
+  progressLabel.textContent = `${Math.round(getCaptureProgress() * 100)}%`;
 }
 
-function getMirroredProjectPoint(landmark, crop, videoWidth, videoHeight, canvasWidth, canvasHeight) {
-  const point = projectLandmark(landmark, crop, videoWidth, videoHeight, canvasWidth, canvasHeight);
-  return { x: canvasWidth - point.x, y: point.y };
-}
-
-function drawFaceMeshOverlay(landmarks, crop, videoWidth, videoHeight, canvasWidth, canvasHeight, cx, cy, radius) {
-  if (!landmarks || !window.FACEMESH_TESSELATION) return;
-
+function drawSegmentedRing(progress, cx, cy) {
+  const activeSegments = Math.round(clamp(progress, 0, 1) * RING_SEGMENTS);
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.translate(canvasWidth, 0);
-  ctx.scale(-1, 1);
-  ctx.strokeStyle = "rgba(57, 255, 20, 0.16)";
-  ctx.lineWidth = 1;
-
-  const connections = window.FACEMESH_TESSELATION;
-  for (let i = 0; i < connections.length; i += 1) {
-    const a = landmarks[connections[i][0]];
-    const b = landmarks[connections[i][1]];
-    if (!a || !b) continue;
-
-    const p1 = projectLandmark(a, crop, videoWidth, videoHeight, canvasWidth, canvasHeight);
-    const p2 = projectLandmark(b, crop, videoWidth, videoHeight, canvasWidth, canvasHeight);
+  ctx.lineCap = "round";
+  ctx.lineWidth = 5;
+  for (let i = 0; i < RING_SEGMENTS; i += 1) {
+    const angle = -Math.PI / 2 + (i / RING_SEGMENTS) * Math.PI * 2;
+    const start = {
+      x: cx + Math.cos(angle) * RING_INNER_RADIUS,
+      y: cy + Math.sin(angle) * RING_INNER_RADIUS,
+    };
+    const end = {
+      x: cx + Math.cos(angle) * RING_OUTER_RADIUS,
+      y: cy + Math.sin(angle) * RING_OUTER_RADIUS,
+    };
     ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.strokeStyle = i < activeSegments
+      ? themeColor("--ring-active", "#08bd79")
+      : themeColor("--ring-idle", "#cac3b4");
     ctx.stroke();
   }
-
   ctx.restore();
 }
 
-function getTargetCanvasPoint(target, cx, cy, radius) {
-  if (target.id === 6) {
-    return state.latestNosePoint || { x: cx, y: cy };
-  }
-
-  const distance = radius + 46;
-  return {
-    x: cx + target.vector.x * distance,
-    y: cy + target.vector.y * distance,
-  };
-}
-
-function drawCaptureTarget(target, cx, cy, radius, activeTarget, now) {
-  const point = getTargetCanvasPoint(target, cx, cy, radius);
-  const isActive = activeTarget && target.id === activeTarget.id;
-  const isCaptured = state.captures.some((capture) => capture.id === target.id);
-  const flash = isActive ? 0.62 + Math.sin(now * 0.012) * 0.28 : 0.42;
-  const targetRadius = isActive ? 19 + Math.sin(now * 0.012) * 3 : 14;
-  const targetColor = themeColor("--target", "#39ff14");
-  const targetBackground = themeColor("--target-bg", "#172033");
-
+function drawFaceIdIcon(cx, cy) {
   ctx.save();
-  ctx.globalAlpha = isCaptured && !isActive ? 0.38 : 1;
+  ctx.strokeStyle = themeColor("--muted", "#918b81");
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.strokeRect(cx - 24, cy - 24, 48, 48);
+  ctx.clearRect(cx - 14, cy - 31, 28, 62);
+  ctx.clearRect(cx - 31, cy - 14, 62, 28);
   ctx.beginPath();
-  ctx.arc(point.x, point.y, targetRadius, 0, Math.PI * 2);
-  ctx.fillStyle = targetColor;
-  ctx.fill();
-  ctx.shadowColor = targetColor;
-  ctx.shadowBlur = isActive ? 14 * flash : 0;
-  ctx.lineWidth = isActive ? 5 : 3;
-  ctx.strokeStyle = targetColor;
+  ctx.arc(cx - 10, cy - 2, 2, 0, Math.PI * 2);
+  ctx.arc(cx + 10, cy - 2, 2, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = targetBackground;
-  ctx.font = "800 18px Avenir Next, Segoe UI, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(String(target.id), point.x, point.y + 0.5);
+  ctx.beginPath();
+  ctx.arc(cx, cy + 9, 13, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.stroke();
   ctx.restore();
 }
 
-function drawCaptureTargets(cx, cy, radius) {
-  const activeTarget = getActiveTarget();
-  const now = performance.now();
-  if (activeTarget) drawCaptureTarget(activeTarget, cx, cy, radius, activeTarget, now);
-}
-
-function drawDirectionLines(cx, cy, radius, yaw, pitch, hasFace) {
-  const angle = Math.atan2(pitch, yaw);
-  const directionMagnitude = Math.hypot(yaw, pitch);
-  const hasDirection = hasFace && directionMagnitude >= STRAIGHT_GAZE_THRESHOLD;
-  if (!hasDirection) return;
-
-  const waveStrength = clamp((directionMagnitude - STRAIGHT_GAZE_THRESHOLD) / 0.45, 0, 1);
-  const lineCount = 96;
-  const baseLength = 3;
-  const maxExtension = 34 * waveStrength;
-
-  for (let i = 0; i < lineCount; i += 1) {
-    const a = (i / lineCount) * Math.PI * 2;
-    const diff = shortestAngularDistance(a, angle);
-    const influence = Math.exp(-diff * 4.4);
-    const shimmer = hasFace ? Math.sin((performance.now() * 0.006) + i * 0.23) * 0.75 * waveStrength : 0;
-    const length = baseLength + influence * maxExtension + shimmer;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
-    ctx.lineTo(cx + Math.cos(a) * (radius + length), cy + Math.sin(a) * (radius + length));
-    ctx.lineWidth = 5.4;
-    ctx.strokeStyle = `rgba(57, 255, 20, ${0.24 + influence * 0.76 * waveStrength})`;
-    ctx.stroke();
-  }
+function drawDoneAvatar(cx, cy) {
+  if (!state.doneImage) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 38, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(state.doneImage, cx - 38, cy - 38, 76, 76);
+  ctx.restore();
 }
 
 function drawScene(yaw, pitch, hasFace, landmarks = null) {
@@ -204,10 +126,22 @@ function drawScene(yaw, pitch, hasFace, landmarks = null) {
   const h = CANVAS_LOGICAL_SIZE;
   const cx = w / 2;
   const cy = h / 2;
-  const radius = Math.min(w, h) * 0.34;
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = themeColor("--bg", "#f5f3f0");
   ctx.fillRect(0, 0, w, h);
+  updateProgressLabel();
+
+  if (state.mode === "intro") {
+    drawSegmentedRing(0, cx, cy);
+    drawFaceIdIcon(cx, cy);
+    return;
+  }
+
+  if (state.mode === "done") {
+    drawSegmentedRing(1, cx, cy);
+    drawDoneAvatar(cx, cy);
+    return;
+  }
 
   if (video.readyState >= 2) {
     const videoW = video.videoWidth || w;
@@ -216,27 +150,15 @@ function drawScene(yaw, pitch, hasFace, landmarks = null) {
 
     ctx.save();
     ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, VIDEO_RADIUS, 0, Math.PI * 2);
     ctx.clip();
     ctx.translate(w, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, w, h);
     ctx.restore();
-
-    if (hasFace && landmarks) {
-      state.latestNosePoint = getMirroredProjectPoint(landmarks[1], crop, videoW, videoH, w, h);
-      drawFaceMeshOverlay(landmarks, crop, videoW, videoH, w, h, cx, cy, radius);
-    }
   }
 
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--ring").trim();
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  drawDirectionLines(cx, cy, radius, yaw, pitch, hasFace);
-  drawCaptureTargets(cx, cy, radius);
+  drawSegmentedRing(getCaptureProgress(), cx, cy);
 }
 
 function syncCanvasResolution() {
@@ -306,8 +228,15 @@ function captureActiveTarget(target) {
     total: captureTargets.length,
   });
   const nextTarget = getActiveTarget();
-  statusLabel.textContent = nextTarget ? `Captured ${target.id}.` : "Capture sequence complete.";
+  statusLabel.textContent = nextTarget ? "Move your head slowly around" : "All done!";
   if (!nextTarget) {
+    const image = new Image();
+    image.onload = () => {
+      state.doneImage = image;
+      drawScene(state.smoothYaw, state.smoothPitch, state.hasFace, null);
+    };
+    image.src = capture.src;
+    setUiMode("done");
     postBridge("complete", {
       captures: state.captures.map((c) => ({ id: c.id, name: c.name, direction: c.direction, src: c.src })),
     });
@@ -350,7 +279,6 @@ function updateCaptureSequence() {
 }
 
 drawScene(0, 0, false);
-updateDebugLabel();
 
 const faceMesh = new FaceMesh({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
@@ -369,11 +297,9 @@ faceMesh.onResults((results) => {
     state.hasFace = false;
     state.smoothYaw = lerp(state.smoothYaw, 0, 0.12);
     state.smoothPitch = lerp(state.smoothPitch, 0, 0.12);
-    state.latestNosePoint = null;
     state.targetHoldStartedAt = 0;
     drawScene(state.smoothYaw, state.smoothPitch, false, null);
-    updateDebugLabel();
-    statusLabel.textContent = "Face not detected.";
+    if (state.mode === "scan") statusLabel.textContent = "Face not detected.";
     return;
   }
 
@@ -435,21 +361,21 @@ faceMesh.onResults((results) => {
 
   drawScene(state.smoothYaw, state.smoothPitch, true, landmarks);
   updateCaptureSequence();
-  updateDebugLabel();
 
   const smoothMagnitude = Math.hypot(state.smoothYaw, state.smoothPitch);
   if (getActiveTarget()) {
     statusLabel.textContent = state.calibrationFrames < 30
-      ? "Calibrating... keep head neutral."
-      : `Target ${getActiveTarget().id}: ${getActiveTarget().name}`;
+      ? "Hold still for a moment"
+      : "Move your head slowly around";
   } else if (smoothMagnitude < STRAIGHT_GAZE_THRESHOLD) {
-    statusLabel.textContent = "Looking straight.";
+    statusLabel.textContent = "All done!";
   }
 });
 
 async function start() {
   if (state.running) return;
-  statusLabel.textContent = "Requesting webcam permission...";
+  setUiMode("scan");
+  statusLabel.textContent = "Requesting camera permission...";
 
   try {
     const stream = await requestCameraStream({
@@ -475,10 +401,11 @@ async function start() {
     state.smoothYaw = 0;
     state.smoothPitch = 0;
     state.captures = [];
+    state.doneImage = null;
     state.activeTargetIndex = 0;
     state.targetHoldStartedAt = 0;
     renderCaptures();
-    statusLabel.textContent = "Calibrating... keep head neutral.";
+    statusLabel.textContent = "Hold still for a moment";
     centerButton.disabled = false;
     postBridge("ready", {});
   } catch (error) {
@@ -497,14 +424,21 @@ function setStraight() {
   state.latestYaw = 0;
   state.latestPitch = 0;
   statusLabel.textContent = "Looking straight.";
-  updateDebugLabel();
   drawScene(0, 0, state.hasFace, null);
 }
 
+primaryButton.addEventListener("click", () => {
+  if (state.mode === "done") {
+    postBridge("continue", {
+      captures: state.captures.map((c) => ({ id: c.id, name: c.name, direction: c.direction, src: c.src })),
+    });
+    return;
+  }
+  start();
+});
 centerButton.addEventListener("click", setStraight);
-copyDebugButton.addEventListener("click", copyDebugValues);
 window.addEventListener("resize", () => drawScene(state.smoothYaw, state.smoothPitch, state.hasFace, null));
-start();
+setUiMode("intro");
 window.facesBasicDebug = {
   state,
   captureTargets,
@@ -514,5 +448,4 @@ window.facesBasicDebug = {
   captureActiveTarget,
   targetMatchesGaze,
   updateCaptureSequence,
-  updateDebugLabel,
 };

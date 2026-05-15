@@ -1,5 +1,15 @@
 require_relative '../node_modules/react-native/scripts/react_native_pods'
 
+boost_podspec = File.expand_path('../node_modules/react-native/third-party-podspecs/boost.podspec', __dir__)
+if File.exist?(boost_podspec)
+  boost_spec = File.read(boost_podspec)
+  patched_boost_spec = boost_spec.gsub(
+    'https://boostorg.jfrog.io/artifactory/main/release',
+    'https://archives.boost.io/release'
+  )
+  File.write(boost_podspec, patched_boost_spec) if patched_boost_spec != boost_spec
+end
+
 platform :ios, "16.0"
 prepare_react_native_project!
 

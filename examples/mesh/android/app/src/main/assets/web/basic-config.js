@@ -17,7 +17,6 @@ const CaptureDirection = Object.freeze({
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-const formatDebugValue = (value) => value.toFixed(4).padStart(7, " ");
 const themeColor = (name, fallback) => (
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
 );
@@ -74,14 +73,6 @@ function formatCameraError(error) {
   return cameraErrorMessages[name] || (error && error.message ? error.message : String(error));
 }
 
-function shortestAngularDistance(a, b) {
-  const tau = Math.PI * 2;
-  let diff = (a - b) % tau;
-  if (diff > Math.PI) diff -= tau;
-  if (diff < -Math.PI) diff += tau;
-  return Math.abs(diff);
-}
-
 function getVideoCrop(videoWidth, videoHeight, canvasWidth, canvasHeight) {
   const canvasAspect = canvasWidth / canvasHeight;
   const videoAspect = videoWidth / videoHeight;
@@ -99,13 +90,4 @@ function getVideoCrop(videoWidth, videoHeight, canvasWidth, canvasHeight) {
   }
 
   return { sx, sy, sw, sh };
-}
-
-function projectLandmark(landmark, crop, videoWidth, videoHeight, canvasWidth, canvasHeight) {
-  const xPx = landmark.x * videoWidth;
-  const yPx = landmark.y * videoHeight;
-  return {
-    x: ((xPx - crop.sx) / crop.sw) * canvasWidth,
-    y: ((yPx - crop.sy) / crop.sh) * canvasHeight,
-  };
 }
