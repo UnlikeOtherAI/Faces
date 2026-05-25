@@ -12,8 +12,8 @@ const RING_GAP = 10;
 const RING_INNER_RADIUS = VIDEO_RADIUS + RING_GAP;
 const RING_OUTER_RADIUS = 314;
 const RING_SEGMENTS = 72;
-// Half-width of the painted gaze trail in radians (~10°).
-const PAINT_TRAIL_HALF = Math.PI / 18;
+// Half-width of the arc painted around each captured direction (~45°).
+const CAPTURED_ARC_HALF = Math.PI / 4;
 
 function postBridge(type, payload) {
   if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === "function") {
@@ -110,15 +110,27 @@ function scanSegmentColor(i) {
   return themeColor("--ring-idle", "#cac3b4");
 }
 
-function paintGazeTrail() {
+function paintCapturedArc(target) {
+  if (!target.vector) return;
+  const angle = Math.atan2(target.vector.y, target.vector.x);
+  for (let i = 0; i < RING_SEGMENTS; i += 1) {
+    const segmentAngle = -Math.PI / 2 - (i / RING_SEGMENTS) * Math.PI * 2;
+    if (angularDistance(segmentAngle, angle) <= CAPTURED_ARC_HALF) state.litSegments.add(i);
+  }
+}
+
+function drawGazeCursor(cx, cy) {
   if (!state.hasFace) return;
   const magnitude = Math.hypot(state.smoothYaw, state.smoothPitch);
   if (magnitude < STRAIGHT_GAZE_THRESHOLD) return;
-  const gazeAngle = Math.atan2(state.smoothPitch, state.smoothYaw);
-  for (let i = 0; i < RING_SEGMENTS; i += 1) {
-    const segmentAngle = -Math.PI / 2 - (i / RING_SEGMENTS) * Math.PI * 2;
-    if (angularDistance(segmentAngle, gazeAngle) <= PAINT_TRAIL_HALF) state.litSegments.add(i);
-  }
+  const angle = Math.atan2(state.smoothPitch, state.smoothYaw);
+  const r = (RING_INNER_RADIUS + RING_OUTER_RADIUS) / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 9, 0, Math.PI * 2);
+  ctx.fillStyle = themeColor("--ink", "#4b4741");
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawFaceIdIcon(cx, cy) {
@@ -191,6 +203,7 @@ function drawScene(yaw, pitch, hasFace, landmarks = null) {
   }
 
   drawRing(cx, cy, scanSegmentColor);
+  drawGazeCursor(cx, cy);
 }
 
 function syncCanvasResolution() {
@@ -250,6 +263,7 @@ function captureTarget(target) {
   state.capturedIds.add(target.id);
   state.currentMatchedTargetId = null;
   state.targetHoldStartedAt = 0;
+  paintCapturedArc(target);
   renderCaptures();
   dispatchPhotoCapturedEvent(capture);
   postBridge("capture", {
@@ -262,11 +276,7 @@ function captureTarget(target) {
   });
   const allDone = state.capturedIds.size === captureTargets.length;
   const onlyStraightLeft = state.capturedIds.size === captureTargets.length - 1 && !state.capturedIds.has(6);
-  statusLabel.textContent = allDone
-    ? "All done!"
-    : onlyStraightLeft
-      ? "Look straight into the camera"
-      : "Move your head slowly around";
+  statusLabel.textContent = allDone ? "All done!" : onlyStraightLeft ? "Look straight into the camera" : "Move your head slowly around";
   if (allDone) {
     const image = new Image();
     image.onload = () => {
@@ -392,7 +402,6 @@ faceMesh.onResults((results) => {
   state.latestPitch = pitch;
   state.hasFace = true;
 
-  paintGazeTrail();
   drawScene(state.smoothYaw, state.smoothPitch, true, landmarks);
   updateCaptureSequence();
 
