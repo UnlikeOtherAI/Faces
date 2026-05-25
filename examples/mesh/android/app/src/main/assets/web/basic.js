@@ -119,20 +119,6 @@ function paintCapturedArc(target) {
   }
 }
 
-function drawGazeCursor(cx, cy) {
-  if (!state.hasFace) return;
-  const magnitude = Math.hypot(state.smoothYaw, state.smoothPitch);
-  if (magnitude < STRAIGHT_GAZE_THRESHOLD) return;
-  const angle = Math.atan2(state.smoothPitch, state.smoothYaw);
-  const r = (RING_INNER_RADIUS + RING_OUTER_RADIUS) / 2;
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 9, 0, Math.PI * 2);
-  ctx.fillStyle = themeColor("--ink", "#4b4741");
-  ctx.fill();
-  ctx.restore();
-}
-
 function drawFaceIdIcon(cx, cy) {
   ctx.save();
   ctx.strokeStyle = themeColor("--muted", "#918b81");
@@ -203,7 +189,6 @@ function drawScene(yaw, pitch, hasFace, landmarks = null) {
   }
 
   drawRing(cx, cy, scanSegmentColor);
-  drawGazeCursor(cx, cy);
 }
 
 function syncCanvasResolution() {
