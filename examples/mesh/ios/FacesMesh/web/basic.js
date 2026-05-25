@@ -12,6 +12,11 @@ const RING_GAP = 10;
 const RING_INNER_RADIUS = VIDEO_RADIUS + RING_GAP;
 const RING_OUTER_RADIUS = 314;
 const RING_SEGMENTS = 72;
+const SEGMENTS_PER_TARGET = RING_SEGMENTS / 6;
+// Arc index maps to a target id. Segments are drawn CCW from top, so this
+// ordering places each target's arc near its gaze angle (and gives the
+// special "straight" target the bottom arc since it has no spatial direction).
+const ARC_TO_TARGET_ID = [2, 1, 5, 6, 4, 3];
 
 function postBridge(type, payload) {
   if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === "function") {
@@ -33,7 +38,8 @@ const state = {
   latestRawPitch: 0,
   latestYaw: 0,
   latestPitch: 0,
-  activeTargetIndex: 0,
+  capturedIds: new Set(),
+  currentMatchedTargetId: null,
   targetHoldStartedAt: 0,
   doneImage: null,
   captures: [],
@@ -43,22 +49,19 @@ if (isIOS && !window.isSecureContext) {
   statusLabel.textContent = "iPhone camera needs HTTPS. Open this page with an https:// URL.";
 }
 
-function getActiveTarget() {
-  return captureTargets[state.activeTargetIndex] || null;
-}
-
 function setUiMode(mode) {
   state.mode = mode;
   document.body.dataset.mode = mode;
   if (primaryButton) primaryButton.textContent = mode === "done" ? "Continue" : "Get Started";
 }
 
+function getHoldFraction() {
+  if (!state.currentMatchedTargetId || !state.targetHoldStartedAt) return 0;
+  return clamp((performance.now() - state.targetHoldStartedAt) / TARGET_HOLD_MS, 0, 1);
+}
+
 function getCaptureProgress() {
-  const target = getActiveTarget();
-  const hold = state.targetHoldStartedAt
-    ? clamp((performance.now() - state.targetHoldStartedAt) / TARGET_HOLD_MS, 0, 1)
-    : 0;
-  return target ? (state.captures.length + hold) / captureTargets.length : 1;
+  return Math.min((state.capturedIds.size + getHoldFraction()) / captureTargets.length, 1);
 }
 
 function updateProgressLabel() {
@@ -66,29 +69,62 @@ function updateProgressLabel() {
   progressLabel.textContent = `${Math.round(getCaptureProgress() * 100)}%`;
 }
 
-function drawSegmentedRing(progress, cx, cy) {
-  const activeSegments = Math.round(clamp(progress, 0, 1) * RING_SEGMENTS);
+function targetMatchesGaze(target) {
+  if (!state.hasFace || !target) return false;
+  const magnitude = Math.hypot(state.smoothYaw, state.smoothPitch);
+  if (target.id === 6) return magnitude < STRAIGHT_GAZE_THRESHOLD;
+  if (magnitude < TARGET_MIN_MAGNITUDE) return false;
+  const dot = (state.smoothYaw / magnitude) * target.vector.x
+    + (state.smoothPitch / magnitude) * target.vector.y;
+  return dot >= TARGET_DOT_THRESHOLD;
+}
+
+function findCurrentMatchingTarget() {
+  for (const target of captureTargets) {
+    if (state.capturedIds.has(target.id)) continue;
+    if (targetMatchesGaze(target)) return target;
+  }
+  return null;
+}
+
+function drawRing(cx, cy, segmentColor) {
   ctx.save();
   ctx.lineCap = "round";
   ctx.lineWidth = 5;
   for (let i = 0; i < RING_SEGMENTS; i += 1) {
     const angle = -Math.PI / 2 - (i / RING_SEGMENTS) * Math.PI * 2;
-    const start = {
-      x: cx + Math.cos(angle) * RING_INNER_RADIUS,
-      y: cy + Math.sin(angle) * RING_INNER_RADIUS,
-    };
-    const end = {
-      x: cx + Math.cos(angle) * RING_OUTER_RADIUS,
-      y: cy + Math.sin(angle) * RING_OUTER_RADIUS,
-    };
     ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
-    ctx.strokeStyle = i < activeSegments
-      ? themeColor("--ring-active", "#08bd79")
-      : themeColor("--ring-idle", "#cac3b4");
+    ctx.moveTo(cx + Math.cos(angle) * RING_INNER_RADIUS, cy + Math.sin(angle) * RING_INNER_RADIUS);
+    ctx.lineTo(cx + Math.cos(angle) * RING_OUTER_RADIUS, cy + Math.sin(angle) * RING_OUTER_RADIUS);
+    ctx.strokeStyle = segmentColor(i);
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+function scanSegmentColor(i) {
+  const arcIdx = Math.floor(i / SEGMENTS_PER_TARGET);
+  const targetId = ARC_TO_TARGET_ID[arcIdx];
+  if (state.capturedIds.has(targetId)) return themeColor("--ring-active", "#08bd79");
+  if (state.currentMatchedTargetId === targetId) {
+    const segmentInArc = i - arcIdx * SEGMENTS_PER_TARGET;
+    const filled = Math.round(getHoldFraction() * SEGMENTS_PER_TARGET);
+    if (segmentInArc < filled) return themeColor("--ring-active", "#08bd79");
+  }
+  return themeColor("--ring-idle", "#cac3b4");
+}
+
+function drawGazeCursor(cx, cy) {
+  if (!state.hasFace) return;
+  const magnitude = Math.hypot(state.smoothYaw, state.smoothPitch);
+  if (magnitude < STRAIGHT_GAZE_THRESHOLD) return;
+  const angle = Math.atan2(state.smoothPitch, state.smoothYaw);
+  const r = (RING_INNER_RADIUS + RING_OUTER_RADIUS) / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 9, 0, Math.PI * 2);
+  ctx.fillStyle = themeColor("--ink", "#4b4741");
+  ctx.fill();
   ctx.restore();
 }
 
@@ -131,14 +167,17 @@ function drawScene(yaw, pitch, hasFace, landmarks = null) {
   ctx.fillRect(0, 0, w, h);
   updateProgressLabel();
 
+  const idleColor = themeColor("--ring-idle", "#cac3b4");
+  const activeColor = themeColor("--ring-active", "#08bd79");
+
   if (state.mode === "intro") {
-    drawSegmentedRing(0, cx, cy);
+    drawRing(cx, cy, () => idleColor);
     drawFaceIdIcon(cx, cy);
     return;
   }
 
   if (state.mode === "done") {
-    drawSegmentedRing(1, cx, cy);
+    drawRing(cx, cy, () => activeColor);
     drawDoneAvatar(cx, cy);
     return;
   }
@@ -158,7 +197,8 @@ function drawScene(yaw, pitch, hasFace, landmarks = null) {
     ctx.restore();
   }
 
-  drawSegmentedRing(getCaptureProgress(), cx, cy);
+  drawRing(cx, cy, scanSegmentColor);
+  drawGazeCursor(cx, cy);
 }
 
 function syncCanvasResolution() {
@@ -211,11 +251,12 @@ function createCameraSnapshot() {
   return output.toDataURL("image/jpeg", 0.88);
 }
 
-function captureActiveTarget(target) {
+function captureTarget(target) {
   const src = createCameraSnapshot();
   const capture = { id: target.id, direction: target.direction, name: target.name, src };
   state.captures.push(capture);
-  state.activeTargetIndex += 1;
+  state.capturedIds.add(target.id);
+  state.currentMatchedTargetId = null;
   state.targetHoldStartedAt = 0;
   renderCaptures();
   dispatchPhotoCapturedEvent(capture);
@@ -227,9 +268,9 @@ function captureActiveTarget(target) {
     index: state.captures.length - 1,
     total: captureTargets.length,
   });
-  const nextTarget = getActiveTarget();
-  statusLabel.textContent = nextTarget ? "Move your head slowly around" : "All done!";
-  if (!nextTarget) {
+  const allDone = state.capturedIds.size === captureTargets.length;
+  statusLabel.textContent = allDone ? "All done!" : "Move your head slowly around";
+  if (allDone) {
     const image = new Image();
     image.onload = () => {
       state.doneImage = image;
@@ -255,26 +296,20 @@ function dispatchPhotoCapturedEvent(capture) {
   }));
 }
 
-function targetMatchesGaze(target) {
-  if (!state.hasFace || !target) return false;
-  const magnitude = Math.hypot(state.smoothYaw, state.smoothPitch);
-  if (target.id === 6) return magnitude < STRAIGHT_GAZE_THRESHOLD;
-  if (magnitude < TARGET_MIN_MAGNITUDE) return false;
-  const dot = (state.smoothYaw / magnitude) * target.vector.x
-    + (state.smoothPitch / magnitude) * target.vector.y;
-  return dot >= TARGET_DOT_THRESHOLD;
-}
-
 function updateCaptureSequence() {
-  const target = getActiveTarget();
-  if (!target || !targetMatchesGaze(target)) {
+  const matched = findCurrentMatchingTarget();
+  if (!matched) {
+    state.currentMatchedTargetId = null;
     state.targetHoldStartedAt = 0;
     return;
   }
-
-  if (!state.targetHoldStartedAt) state.targetHoldStartedAt = performance.now();
+  if (matched.id !== state.currentMatchedTargetId) {
+    state.currentMatchedTargetId = matched.id;
+    state.targetHoldStartedAt = performance.now();
+    return;
+  }
   if (performance.now() - state.targetHoldStartedAt >= TARGET_HOLD_MS) {
-    captureActiveTarget(target);
+    captureTarget(matched);
   }
 }
 
@@ -298,6 +333,7 @@ faceMesh.onResults((results) => {
     state.smoothYaw = lerp(state.smoothYaw, 0, 0.12);
     state.smoothPitch = lerp(state.smoothPitch, 0, 0.12);
     state.targetHoldStartedAt = 0;
+    state.currentMatchedTargetId = null;
     drawScene(state.smoothYaw, state.smoothPitch, false, null);
     if (state.mode === "scan") statusLabel.textContent = "Face not detected.";
     return;
@@ -362,12 +398,11 @@ faceMesh.onResults((results) => {
   drawScene(state.smoothYaw, state.smoothPitch, true, landmarks);
   updateCaptureSequence();
 
-  const smoothMagnitude = Math.hypot(state.smoothYaw, state.smoothPitch);
-  if (getActiveTarget()) {
+  if (state.capturedIds.size < captureTargets.length) {
     statusLabel.textContent = state.calibrationFrames < 30
       ? "Hold still for a moment"
       : "Move your head slowly around";
-  } else if (smoothMagnitude < STRAIGHT_GAZE_THRESHOLD) {
+  } else {
     statusLabel.textContent = "All done!";
   }
 });
@@ -402,7 +437,8 @@ async function start() {
     state.smoothPitch = 0;
     state.captures = [];
     state.doneImage = null;
-    state.activeTargetIndex = 0;
+    state.capturedIds = new Set();
+    state.currentMatchedTargetId = null;
     state.targetHoldStartedAt = 0;
     renderCaptures();
     statusLabel.textContent = "Hold still for a moment";
@@ -445,7 +481,7 @@ window.facesBasicDebug = {
   CaptureDirection,
   PHOTO_CAPTURED_EVENT,
   drawScene,
-  captureActiveTarget,
+  captureTarget,
   targetMatchesGaze,
   updateCaptureSequence,
 };
