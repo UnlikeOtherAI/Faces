@@ -12,11 +12,8 @@ const RING_GAP = 10;
 const RING_INNER_RADIUS = VIDEO_RADIUS + RING_GAP;
 const RING_OUTER_RADIUS = 314;
 const RING_SEGMENTS = 72;
-const SEGMENTS_PER_TARGET = RING_SEGMENTS / 6;
-// Arc index maps to a target id. Segments are drawn CCW from top, so this
-// ordering places each target's arc near its gaze angle (and gives the
-// special "straight" target the bottom arc since it has no spatial direction).
-const ARC_TO_TARGET_ID = [2, 1, 5, 6, 4, 3];
+// Half-width of the arc each captured directional target lights up on the ring.
+const CAPTURED_ARC_HALF = Math.PI / 6;
 
 function postBridge(type, payload) {
   if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === "function") {
@@ -102,14 +99,23 @@ function drawRing(cx, cy, segmentColor) {
   ctx.restore();
 }
 
+function angularDistance(a, b) {
+  let diff = ((a - b) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+  return Math.abs(diff);
+}
+
 function scanSegmentColor(i) {
-  const arcIdx = Math.floor(i / SEGMENTS_PER_TARGET);
-  const targetId = ARC_TO_TARGET_ID[arcIdx];
-  if (state.capturedIds.has(targetId)) return themeColor("--ring-active", "#08bd79");
-  if (state.currentMatchedTargetId === targetId) {
-    const segmentInArc = i - arcIdx * SEGMENTS_PER_TARGET;
-    const filled = Math.round(getHoldFraction() * SEGMENTS_PER_TARGET);
-    if (segmentInArc < filled) return themeColor("--ring-active", "#08bd79");
+  const segmentAngle = -Math.PI / 2 - (i / RING_SEGMENTS) * Math.PI * 2;
+  const activeColor = themeColor("--ring-active", "#08bd79");
+  for (const target of captureTargets) {
+    if (!state.capturedIds.has(target.id) || !target.vector) continue;
+    const angle = Math.atan2(target.vector.y, target.vector.x);
+    if (angularDistance(segmentAngle, angle) <= CAPTURED_ARC_HALF) return activeColor;
+  }
+  if (state.hasFace && state.currentMatchedTargetId && state.currentMatchedTargetId !== 6) {
+    const hold = getHoldFraction();
+    const gazeAngle = Math.atan2(state.smoothPitch, state.smoothYaw);
+    if (hold > 0 && angularDistance(segmentAngle, gazeAngle) <= CAPTURED_ARC_HALF * hold) return activeColor;
   }
   return themeColor("--ring-idle", "#cac3b4");
 }
