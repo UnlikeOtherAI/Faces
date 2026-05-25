@@ -12,8 +12,8 @@ const RING_GAP = 10;
 const RING_INNER_RADIUS = VIDEO_RADIUS + RING_GAP;
 const RING_OUTER_RADIUS = 314;
 const RING_SEGMENTS = 72;
-// Half-width of the arc each captured directional target lights up on the ring.
-const CAPTURED_ARC_HALF = Math.PI / 6;
+// Half-width of the painted gaze trail in radians (~10°).
+const PAINT_TRAIL_HALF = Math.PI / 18;
 
 function postBridge(type, payload) {
   if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === "function") {
@@ -38,6 +38,7 @@ const state = {
   capturedIds: new Set(),
   currentMatchedTargetId: null,
   targetHoldStartedAt: 0,
+  litSegments: new Set(),
   doneImage: null,
   captures: [],
 };
@@ -105,33 +106,19 @@ function angularDistance(a, b) {
 }
 
 function scanSegmentColor(i) {
-  const segmentAngle = -Math.PI / 2 - (i / RING_SEGMENTS) * Math.PI * 2;
-  const activeColor = themeColor("--ring-active", "#08bd79");
-  for (const target of captureTargets) {
-    if (!state.capturedIds.has(target.id) || !target.vector) continue;
-    const angle = Math.atan2(target.vector.y, target.vector.x);
-    if (angularDistance(segmentAngle, angle) <= CAPTURED_ARC_HALF) return activeColor;
-  }
-  if (state.hasFace && state.currentMatchedTargetId && state.currentMatchedTargetId !== 6) {
-    const hold = getHoldFraction();
-    const gazeAngle = Math.atan2(state.smoothPitch, state.smoothYaw);
-    if (hold > 0 && angularDistance(segmentAngle, gazeAngle) <= CAPTURED_ARC_HALF * hold) return activeColor;
-  }
+  if (state.litSegments.has(i)) return themeColor("--ring-active", "#08bd79");
   return themeColor("--ring-idle", "#cac3b4");
 }
 
-function drawGazeCursor(cx, cy) {
+function paintGazeTrail() {
   if (!state.hasFace) return;
   const magnitude = Math.hypot(state.smoothYaw, state.smoothPitch);
   if (magnitude < STRAIGHT_GAZE_THRESHOLD) return;
-  const angle = Math.atan2(state.smoothPitch, state.smoothYaw);
-  const r = (RING_INNER_RADIUS + RING_OUTER_RADIUS) / 2;
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 9, 0, Math.PI * 2);
-  ctx.fillStyle = themeColor("--ink", "#4b4741");
-  ctx.fill();
-  ctx.restore();
+  const gazeAngle = Math.atan2(state.smoothPitch, state.smoothYaw);
+  for (let i = 0; i < RING_SEGMENTS; i += 1) {
+    const segmentAngle = -Math.PI / 2 - (i / RING_SEGMENTS) * Math.PI * 2;
+    if (angularDistance(segmentAngle, gazeAngle) <= PAINT_TRAIL_HALF) state.litSegments.add(i);
+  }
 }
 
 function drawFaceIdIcon(cx, cy) {
@@ -204,7 +191,6 @@ function drawScene(yaw, pitch, hasFace, landmarks = null) {
   }
 
   drawRing(cx, cy, scanSegmentColor);
-  drawGazeCursor(cx, cy);
 }
 
 function syncCanvasResolution() {
@@ -275,7 +261,12 @@ function captureTarget(target) {
     total: captureTargets.length,
   });
   const allDone = state.capturedIds.size === captureTargets.length;
-  statusLabel.textContent = allDone ? "All done!" : "Move your head slowly around";
+  const onlyStraightLeft = state.capturedIds.size === captureTargets.length - 1 && !state.capturedIds.has(6);
+  statusLabel.textContent = allDone
+    ? "All done!"
+    : onlyStraightLeft
+      ? "Look straight into the camera"
+      : "Move your head slowly around";
   if (allDone) {
     const image = new Image();
     image.onload = () => {
@@ -401,15 +392,18 @@ faceMesh.onResults((results) => {
   state.latestPitch = pitch;
   state.hasFace = true;
 
+  paintGazeTrail();
   drawScene(state.smoothYaw, state.smoothPitch, true, landmarks);
   updateCaptureSequence();
 
-  if (state.capturedIds.size < captureTargets.length) {
-    statusLabel.textContent = state.calibrationFrames < 30
-      ? "Hold still for a moment"
-      : "Move your head slowly around";
-  } else {
+  if (state.capturedIds.size >= captureTargets.length) {
     statusLabel.textContent = "All done!";
+  } else if (state.calibrationFrames < 30) {
+    statusLabel.textContent = "Hold still for a moment";
+  } else if (state.capturedIds.size === captureTargets.length - 1 && !state.capturedIds.has(6)) {
+    statusLabel.textContent = "Look straight into the camera";
+  } else {
+    statusLabel.textContent = "Move your head slowly around";
   }
 });
 
@@ -446,6 +440,7 @@ async function start() {
     state.capturedIds = new Set();
     state.currentMatchedTargetId = null;
     state.targetHoldStartedAt = 0;
+    state.litSegments = new Set();
     renderCaptures();
     statusLabel.textContent = "Hold still for a moment";
     centerButton.disabled = false;
